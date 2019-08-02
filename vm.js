@@ -2,10 +2,20 @@ let inst = 0;
 const OpCodes = {
   OP_HALT: inst++,
   OP_CONST: inst++,
+  OP_CONST0: inst++,
+  OP_CONST1: inst++,
   OP_LOAD: inst++,
+  OP_LOAD0: inst++,
+  OP_LOAD1: inst++,
   OP_LOADARG: inst++,
+  OP_LOADARG0: inst++,
+  OP_LOADARG1: inst++,
   OP_SET: inst++,
+  OP_SET0: inst++,
+  OP_SET1: inst++,
   OP_SETARG: inst++,
+  OP_SETARG0: inst++,
+  OP_SETARG1: inst++,
   OP_ADD: inst++,
   OP_ADD1: inst++,
   OP_SUB: inst++,
@@ -83,20 +93,60 @@ function evaluate(instructions) {
         push(read16());
         break;
 
+      case OpCodes.OP_CONST0:
+        push(0);
+        break;
+
+      case OpCodes.OP_CONST1:
+        push(1);
+        break;
+
       case OpCodes.OP_LOAD:
-        push(stack[bp + read16()]);
+        push(stack[localOffset(read16())]);
+        break;
+
+      case OpCodes.OP_LOAD0:
+        push(stack[localOffset(0)]);
+        break;
+
+      case OpCodes.OP_LOAD1:
+        push(stack[localOffset(1)]);
         break;
 
       case OpCodes.OP_LOADARG:
         push(stack[argOffset(read16())]);
         break;
 
+      case OpCodes.OP_LOADARG0:
+        push(stack[argOffset(0)]);
+        break;
+
+      case OpCodes.OP_LOADARG1:
+        push(stack[argOffset(1)]);
+        break;
+
       case OpCodes.OP_SET:
         stack[localOffset(read16())] = pop();
         break;
 
+      case OpCodes.OP_SET0:
+        stack[localOffset(0)] = pop();
+        break;
+
+      case OpCodes.OP_SET1:
+        stack[localOffset(1)] = pop();
+        break;
+
       case OpCodes.OP_SETARG:
         stack[argOffset(read16())] = pop();
+        break;
+
+      case OpCodes.OP_SETARG0:
+        stack[argOffset(0)] = pop();
+        break;
+
+      case OpCodes.OP_SETARG1:
+        stack[argOffset(1)] = pop();
         break;
 
       case OpCodes.OP_ADD: {
@@ -262,37 +312,37 @@ ret
 const factRecursive = n => new Uint8Array([
   // arguments for fact:
   // acc = 1
-  OpCodes.OP_CONST, 0, 1,
+  OpCodes.OP_CONST1,
   // n = 3
   OpCodes.OP_CONST, 0, n,
 
   // call fact, then halt
-  OpCodes.OP_CALL, 0, 10,
+  OpCodes.OP_CALL, 0, 8,
   OpCodes.OP_HALT,
 
   // fact/2
-  OpCodes.OP_CONST, 0, 0,
+  OpCodes.OP_CONST0,
   // load arg 0 -> n
-  OpCodes.OP_LOADARG, 0, 0,
+  OpCodes.OP_LOADARG0,
 
   // if arg0 !== 0, jump to else
   OpCodes.OP_EQ,
-  OpCodes.OP_FJMP, 0, 24,
+  OpCodes.OP_FJMP, 0, 16,
 
   // otherwise return acc
-  OpCodes.OP_LOADARG, 0, 1,
+  OpCodes.OP_LOADARG1,
   OpCodes.OP_RET,
 
   // else
   // acc * n
-  OpCodes.OP_LOADARG, 0, 1,
-  OpCodes.OP_LOADARG, 0, 0,
+  OpCodes.OP_LOADARG1,
+  OpCodes.OP_LOADARG0,
   OpCodes.OP_MUL,
   // n - 1
-  OpCodes.OP_LOADARG, 0, 0,
+  OpCodes.OP_LOADARG0,
   OpCodes.OP_SUB1,
   // recur
-  OpCodes.OP_CALL, 0, 10,
+  OpCodes.OP_CALL, 0, 8,
   OpCodes.OP_RET,
 ]);
 
@@ -341,27 +391,27 @@ const factIterative = n => new Uint8Array([
 
   // fact_iterative/1
   // "declare" and define accumulator
-  OpCodes.OP_CONST, 0, 1,
+  OpCodes.OP_CONST1,
   // while loop top (condition)
-  OpCodes.OP_LOADARG, 0, 0,
-  OpCodes.OP_CONST, 0, 0,
+  OpCodes.OP_LOADARG0,
+  OpCodes.OP_CONST0,
   OpCodes.OP_GT,
   // if n is not greater than 0, exit loop
-  OpCodes.OP_FJMP, 0, 40,
+  OpCodes.OP_FJMP, 0, 24,
   // otherwise, set acc to acc * n
-  OpCodes.OP_LOADARG, 0, 0,
-  OpCodes.OP_LOAD, 0, 0,
+  OpCodes.OP_LOADARG0,
+  OpCodes.OP_LOAD0,
   OpCodes.OP_MUL,
-  OpCodes.OP_SET, 0, 0,
+  OpCodes.OP_SET0,
   // then decrement n
-  OpCodes.OP_LOADARG, 0, 0,
+  OpCodes.OP_LOADARG0,
   OpCodes.OP_SUB1,
-  OpCodes.OP_SETARG, 0, 0,
+  OpCodes.OP_SETARG0,
   // jump back to top of loop
-  OpCodes.OP_JMP, 0, 10,
+  OpCodes.OP_JMP, 0, 8,
 
   // return acc
-  OpCodes.OP_LOAD, 0, 0,
+  OpCodes.OP_LOAD0,
   OpCodes.OP_RET,
 ]);
 
