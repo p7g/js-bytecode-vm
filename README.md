@@ -13,10 +13,6 @@ performance of this thing.
 To see some information while the VM is running, change the `false` in the log
 function to `true`.
 
-Note: there is a memory leak of sorts... The stack only ever grows, and does not
-shrink. It shouldn't grow infinitely unless your program causes such behaviour,
-but the values are not removed from the array, so they won't be cleaned up.
-
 ## Next steps
 
 I think the next thing I will try and implement with this is global variables.

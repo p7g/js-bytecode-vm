@@ -60,7 +60,12 @@ function evaluate(instructions) {
   let sp = 0;
 
   const push = n => (stack[sp++] = n);
-  const pop = () => stack[--sp];
+
+  function pop() {
+    const value = stack[--sp];
+    stack.pop();
+    return value;
+  }
 
   function read() {
     return instructions[ip++];
@@ -90,7 +95,7 @@ function evaluate(instructions) {
   let op;
   while (true) {
     op = read();
-    log('\n' + JSON.stringify(stack.slice(0, sp)) + '\n');
+    log('\n' + JSON.stringify(stack) + '\n');
     log(`ip:${ip} sp:${sp} bp:${bp} ${instructionNames[op]}`);
     switch (op) {
       case OpCodes.OP_HALT:
