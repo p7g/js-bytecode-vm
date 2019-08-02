@@ -65,7 +65,7 @@ function evaluate(instructions) {
     return value;
   }
 
-  // minus 2 to account for stored bp and ip
+  // minus 3 to account for stored bp and ip
   function argOffset(n) {
     const value = bp - 3 - n;
     log(`	argOffset:${value}`);
