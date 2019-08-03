@@ -2,7 +2,7 @@ import OpCodes from './opcode.mjs';
 import { instructionNames, disassemble } from './disassemble.mjs';
 import * as AST from './ast.mjs';
 
-const DEBUG = true;
+const DEBUG = false;
 
 function log(...args) {
   if (DEBUG) {
@@ -52,7 +52,7 @@ function evaluate(instructions) {
   let op;
   while (true) {
     op = read();
-    log('\n' + JSON.stringify(stack) + '\n');
+    log('\n' + JSON.stringify(stack.slice(0, sp)) + '\n');
     log(`ip:${ip} sp:${sp} bp:${bp} ${instructionNames[op]}`);
     switch (op) {
       case OpCodes.OP_HALT:
@@ -419,7 +419,7 @@ const factIterativeAST = new AST.Bytecode().compile(
         new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
       ]),
     ),
-    new AST.CallExpression('fact', [new AST.IntegerLiteral(3)]),
+    new AST.CallExpression('fact', [new AST.IntegerLiteral(10)]),
     new AST.HaltStatement(),
   ]),
 );
@@ -464,9 +464,10 @@ const factRecursiveAST = new AST.Bytecode().compile(
     ])),
 
     new AST.CallExpression('fact', [
-      new AST.IntegerLiteral(3),
+      new AST.IntegerLiteral(10),
       new AST.IntegerLiteral(1),
     ]),
+    new AST.HaltStatement(),
   ]),
 );
 

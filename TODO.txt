@@ -4,6 +4,6 @@ TODO
 - handle variable declarations outside of functions
     - actually, variable declaration should be handled by blocks
 - implicit halt (halt should not be a part of the AST)
-- return seems to be broken
-    - not sure if pointers are restored properly
-    - arguments aren't consumed maybe?
+- there is still a sorta memory leak where things aren't removed from the stack
+    - since OP_RET just sets the stack pointer to the base pointer, we don't pop
+      all the stuff after the base pointer off
