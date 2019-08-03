@@ -1,4 +1,4 @@
-import OpCodes from './opcode';
+import OpCodes from './opcode.mjs';
 
 export const instructionNames = [];
 Object.entries(OpCodes).forEach(([k, v]) => { instructionNames[v] = k; });
@@ -6,7 +6,7 @@ Object.entries(OpCodes).forEach(([k, v]) => { instructionNames[v] = k; });
 export function disassemble(bytecode_) {
   const bytecode = [...bytecode_];
 
-  let i = 0;
+  let i = -1;
   function shift() {
     i += 1;
     return bytecode.shift();
