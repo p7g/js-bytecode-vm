@@ -1,61 +1,5 @@
-import OpCodes from './opcode';
-
-export function compile(tree) {
-  const bytecode = tree.compile(new Scope());
-  const accumulator = [];
-  const labels = {};
-  const labelAddresses = {};
-
-  for (const instruction of bytecode) {
-    if (typeof instruction === 'symbol') {
-      // if we have already tried to use the address of this label, go fill it
-      // in now
-      const address = accumulator.length - 1;
-      labels[instruction] = address;
-
-      if (labelAddresses[instruction] !== undefined) {
-        for (const addr of labelAddresses[instruction]) {
-          accumulator[addr] = address & 0xff00;
-          accumulator[addr + 1] = address & 0xff;
-        }
-      }
-    } else if (instruction instanceof Label) {
-      // if label is in labels, emit address now, otherwise make room for it
-      const target = labels[instruction.label];
-
-      if (target !== undefined) {
-        accumulator.push(target & 0xff00);
-        accumulator.push(target & 0xff);
-      } else {
-        if (labelAddresses[instruction.label]) {
-          labelAddresses[instruction.label].push(accumulator.length);
-        } else {
-          labelAddresses[instruction.label] = [accumulator.length];
-        }
-        accumulator.push();
-        accumulator.push();
-      }
-    } else {
-      accumulator.push(instruction);
-    }
-  }
-
-  return accumulator;
-}
-
-class Label {
-  constructor() {
-    this.symbol = Symbol();
-  }
-
-  get address() {
-    return this;
-  }
-
-  get label() {
-    return this.symbol;
-  }
-}
+import { assert } from './utils.mjs';
+import OpCodes from './opcode.mjs';
 
 class Scope {
   constructor(parent = null) {
@@ -94,16 +38,101 @@ class Scope {
     if (this.bindings.has(name)) {
       throw new Error(`ReferenceError: redeclaring parameter ${name}`);
     }
-    this.bindings.set(name, { type: 'parameter', value: this.nextParamIndex });
+    this.bindings.set(name, {
+      type: 'parameter',
+      value: this.nextParamIndex(),
+    });
   }
 
-  declareFunction(name) {
+  declareFunction(name, label) {
     if (this.bindings.has(name)) {
       throw new Error(`ReferenceError: redeclaring function ${name}`);
     }
-    const label = new Label();
-    this.bindings.set(name, { type: 'function', value: label.address });
-    return label.label;
+    this.bindings.set(name, { type: 'function', value: label });
+    return label;
+  }
+}
+
+class Context {
+  constructor(bc, scope) {
+    this.bc = bc;
+    this.scope = scope;
+  }
+
+  withScope(scope) {
+    return new Context(this.bc, scope);
+  }
+
+  withNewScope() {
+    return this.withScope(new Scope(this.scope));
+  }
+
+  write(instructions) {
+    for (const instruction of instructions) {
+      this.bc.write(instruction);
+    }
+  }
+}
+
+class Label {
+  constructor(bc) {
+    this.bc = bc;
+    this.label_location = null;
+    this.address_locations = [];
+  }
+
+  address() {
+    let location;
+    if (this.label_location !== null) {
+      location = this.label_location;
+    } else {
+      this.address_locations.push(this.bc.position);
+      location = 0;
+    }
+    this.bc.write(location & 0xff00);
+    this.bc.write(location & 0xff);
+  }
+
+  label() {
+    this.label_location = this.bc.position;
+    for (const addr of this.address_locations) {
+      this.bc.update(addr, this.label_location & 0xff00);
+      this.bc.update(addr + 1, this.label_location & 0xff);
+    }
+  }
+}
+
+export class Bytecode {
+  constructor() {
+    this.instructions = [];
+  }
+
+  get position() {
+    return this.instructions.length;
+  }
+
+  _validateByte(b) {
+    assert((b & 0xff) === b, 'instructions must be one byte');
+  }
+
+  write(byte) {
+    this._validateByte(byte);
+    this.instructions.push(byte);
+  }
+
+  update(i, v) {
+    this._validateByte(v);
+    assert(i < this.position, "can't update instructions that don't exist yet");
+    this.instructions[i] = v;
+  }
+
+  newLabel() {
+    return new Label(this);
+  }
+
+  compile(tree) {
+    tree.compile(new Context(this, new Scope()));
+    return this.instructions;
   }
 }
 
@@ -112,7 +141,7 @@ export class IntegerLiteral {
     this.value = value;
   }
 
-  compile(_scope) {
+  compile(ctx) {
     let opcodes;
     switch (this.value) {
       case 0:
@@ -126,26 +155,26 @@ export class IntegerLiteral {
         break;
     }
 
-    return opcodes;
+    ctx.write(opcodes);
   }
 }
 
-function binop(scope, lhs, rhs, op) {
-  return [
-    ...lhs.compile(scope),
-    ...rhs.compile(scope),
-    op,
-  ];
+function binop(ctx, lhs, rhs, op) {
+  lhs.compile(ctx);
+  rhs.compile(ctx);
+  ctx.bc.write(op);
 }
 
-function binop1(scope, lhs, rhs, op1, op) {
+function binop1(ctx, lhs, rhs, op1, op) {
   if (lhs instanceof IntegerLiteral && lhs.value === 1) {
-    return [...rhs.compile(scope), op1];
+    rhs.compile(ctx);
+    ctx.bc.write(op1);
+  } else if (rhs instanceof IntegerLiteral && rhs.value === 1) {
+    lhs.compile(ctx);
+    ctx.bc.write(op1);
+  } else {
+    binop(ctx, lhs, rhs, op);
   }
-  if (rhs instanceof IntegerLiteral && rhs.value === 1) {
-    return [...lhs.compile(scope), op1];
-  }
-  return binop(scope, lhs, rhs, op);
 }
 
 export class BinaryExpression {
@@ -155,29 +184,40 @@ export class BinaryExpression {
     this.rhs = rhs;
   }
 
-  compile(scope) {
+  compile(ctx) {
     const { lhs, rhs } = this;
+
     switch (this.op) {
       case '+':
-        return binop1(scope, lhs, rhs, OpCodes.OP_ADD1, OpCodes.OP_ADD);
+        binop1(ctx, lhs, rhs, OpCodes.OP_ADD1, OpCodes.OP_ADD);
+        break;
       case '-':
-        return binop1(scope, lhs, rhs, OpCodes.OP_SUB1, OpCodes.OP_SUB);
+        binop1(ctx, lhs, rhs, OpCodes.OP_SUB1, OpCodes.OP_SUB);
+        break;
       case '*':
-        return binop(scope, lhs, rhs, OpCodes.OP_MUL);
+        binop(ctx, lhs, rhs, OpCodes.OP_MUL);
+        break;
       case '/':
-        return binop(scope, lhs, rhs, OpCodes.OP_DIV);
+        binop(ctx, lhs, rhs, OpCodes.OP_DIV);
+        break;
       case '&':
-        return binop(scope, lhs, rhs, OpCodes.OP_AND);
+        binop(ctx, lhs, rhs, OpCodes.OP_AND);
+        break;
       case '|':
-        return binop(scope, lhs, rhs, OpCodes.OP_OR);
+        binop(ctx, lhs, rhs, OpCodes.OP_OR);
+        break;
       case '<':
-        return binop(scope, lhs, rhs, OpCodes.OP_LT);
+        binop(ctx, lhs, rhs, OpCodes.OP_LT);
+        break;
       case '>':
-        return binop(scope, lhs, rhs, OpCodes.OP_GT);
+        binop(ctx, lhs, rhs, OpCodes.OP_GT);
+        break;
       case '==':
-        return binop(scope, lhs, rhs, OpCodes.OP_EQ);
+        binop(ctx, lhs, rhs, OpCodes.OP_EQ);
+        break;
       case '!=':
-        return binop(scope, lhs, rhs, OpCodes.OP_NE);
+        binop(ctx, lhs, rhs, OpCodes.OP_NE);
+        break;
       default:
         throw new Error(`Unknown operator ${this.op}`);
     }
@@ -190,7 +230,7 @@ export class UnaryExpression {
     this.expr = expr;
   }
 
-  compile(scope) {
+  compile(ctx) {
     let op;
     switch (this.op) {
       case '-':
@@ -203,16 +243,14 @@ export class UnaryExpression {
         throw new Error(`Unrecognized unary operator ${this.op}`);
     }
 
-    return [
-      ...this.expr.compile(scope),
-      op,
-    ];
+    this.expr.compile(ctx);
+    this.bc.write(op);
   }
 }
 
 export class HaltStatement {
-  compile() {
-    return [OpCodes.OP_HALT];
+  compile(ctx) {
+    ctx.bc.write(OpCodes.OP_HALT);
   }
 }
 
@@ -223,23 +261,19 @@ export class IfStatement {
     this.otherwise = otherwise;
   }
 
-  compile(scope) {
-    const otherwise = new Label();
-    const end = new Label();
+  compile(ctx) {
+    const otherwise = ctx.bc.newLabel();
+    const end = ctx.bc.newLabel();
 
-    const innerScope = new Scope(scope);
-
-    return [
-      ...this.pred.compile(innerScope),
-      OpCodes.OP_FJMP,
-      otherwise.address,
-      ...this.then.compile(innerScope),
-      OpCodes.OP_JMP,
-      end.address,
-      otherwise.label,
-      ...this.otherwise.compile(innerScope),
-      end.label,
-    ];
+    this.pred.compile(ctx);
+    ctx.bc.write(OpCodes.OP_FJMP);
+    otherwise.address();
+    this.then.compile(ctx);
+    ctx.bc.write(OpCodes.OP_JMP);
+    end.address();
+    otherwise.label();
+    this.otherwise.compile(ctx);
+    end.label();
   }
 }
 
@@ -249,8 +283,8 @@ export class AssignmentExpression {
     this.value = value;
   }
 
-  compile(scope) {
-    const { type, value } = scope.get(this.target);
+  compile(ctx) {
+    const { type, value } = ctx.scope.get(this.target);
 
     let ops;
     if (type === 'variable') {
@@ -275,10 +309,8 @@ export class AssignmentExpression {
       );
     }
 
-    return [
-      ...this.value.compile(scope),
-      ...ops,
-    ];
+    this.value.compile(ctx);
+    ctx.write(ops);
   }
 }
 
@@ -288,21 +320,18 @@ export class WhileStatement {
     this.body = body;
   }
 
-  compile(scope) {
-    const top = new Label();
-    const exit = new Label();
+  compile(ctx) {
+    const top = ctx.bc.newLabel();
+    const exit = ctx.bc.newLabel();
 
-    const innerScope = new Scope(scope);
-
-    return [
-      top.label,
-      ...this.pred.compile(scope),
-      OpCodes.OP_FJMP,
-      exit.address,
-      ...this.body.compile(innerScope),
-      top.address,
-      exit.label,
-    ];
+    top.label();
+    this.pred.compile(ctx);
+    ctx.bc.write(OpCodes.OP_FJMP);
+    exit.address();
+    this.body.compile(ctx);
+    ctx.bc.write(OpCodes.OP_JMP);
+    top.address();
+    exit.label();
   }
 }
 
@@ -311,44 +340,37 @@ export class Block {
     this.statements = statements;
   }
 
-  compile(scope) {
+  compile(ctx) {
     // const innerScope = new Scope(scope);
-    let accumulator = [];
-
-    for (const statement of this.statements) {
-      accumulator = accumulator.concat(statement.compile(scope));
-    }
-
-    return accumulator;
+    this.statements.forEach(s => s.compile(ctx));
   }
 }
 
 export class FunctionDeclaration {
-  constructor(name, params, body) {
+  constructor(name, params, localCount, body) {
     this.name = name;
     this.params = params;
+    this.localCount = localCount;
     this.body = body;
   }
 
-  compile(scope) {
-    const innerScope = new Scope(scope);
-    const skip = new Label();
+  compile(ctx) {
+    const functionLabel = ctx.bc.newLabel();
+    ctx.scope.declareFunction(this.name, functionLabel);
+    const innerCtx = ctx.withNewScope();
+    const innerScope = innerCtx.scope;
+    const skip = ctx.bc.newLabel();
 
     for (const param of this.params) {
       innerScope.declareParameter(param);
     }
 
-    const body = this.body.compile(innerScope);
-    const functionLabel = scope.declareFunction(this.name);
-
-    return [
-      OpCodes.OP_JMP,
-      skip.address,
-      functionLabel.label,
-      ...Array(innerScope.index).fill().map(() => OpCodes.OP_CONST0),
-      ...body,
-      skip.label,
-    ];
+    ctx.bc.write(OpCodes.OP_JMP);
+    skip.address();
+    functionLabel.label();
+    ctx.write(Array(this.localCount).fill().map(() => OpCodes.OP_CONST0));
+    this.body.compile(innerCtx);
+    skip.label();
   }
 }
 
@@ -357,8 +379,8 @@ export class VariableDeclaration {
     this.name = name;
   }
 
-  compile(scope) {
-    scope.declareVariable(this.name);
+  compile(ctx) {
+    ctx.scope.declareVariable(this.name);
     return [];
   }
 }
@@ -368,8 +390,8 @@ export class IdentifierExpression {
     this.name = name;
   }
 
-  compile(scope) {
-    const { type, value } = scope.get(this.name);
+  compile(ctx) {
+    const { type, value } = ctx.scope.get(this.name);
 
     let ops;
     switch (type) {
@@ -400,7 +422,7 @@ export class IdentifierExpression {
         throw new Error('unreachable');
     }
 
-    return ops;
+    ctx.write(ops);
   }
 }
 
@@ -410,20 +432,18 @@ export class CallExpression {
     this.args = args;
   }
 
-  compile(scope) {
+  compile(ctx) {
     const { args } = this;
     args.reverse();
 
-    const { type, value: fnLabel } = scope.get(this.name);
+    const { type, value: fnLabel } = ctx.scope.get(this.name);
     if (type !== 'function') {
       throw new Error(`TypeError: cannot call ${this.name} as a function`);
     }
 
-    return [
-      ...args.flatMap(a => a.compile(scope)),
-      OpCodes.OP_CALL,
-      fnLabel.address,
-    ];
+    args.forEach(a => a.compile(ctx));
+    ctx.bc.write(OpCodes.OP_CALL);
+    fnLabel.address();
   }
 }
 
@@ -432,10 +452,8 @@ export class ReturnStatement {
     this.value = value;
   }
 
-  compile(scope) {
-    return [
-      ...this.value.compile(scope),
-      OpCodes.OP_RET,
-    ];
+  compile(ctx) {
+    this.value.compile(ctx);
+    ctx.bc.write(OpCodes.OP_RET);
   }
 }

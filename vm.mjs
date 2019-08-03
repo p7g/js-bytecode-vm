@@ -1,8 +1,11 @@
-import OpCodes from './opcode';
-import { instructionNames, disassemble } from './disassemble';
+import OpCodes from './opcode.mjs';
+import { instructionNames, disassemble } from './disassemble.mjs';
+import * as AST from './ast.mjs';
+
+const DEBUG = true;
 
 function log(...args) {
-  if (false) {
+  if (DEBUG) {
     console.log(...args);
   }
 }
@@ -381,15 +384,10 @@ const factIterative = n => new Uint8Array([
   OpCodes.OP_RET,
 ]);
 
-debugger;
-// console.log(evaluate(factRecursive(10)));
-// console.log(evaluate(factIterative(10)));
 
-import * as AST from './ast';
-
-const bytecode2 = AST.compile(
+const factIterativeAST = new AST.Bytecode().compile(
   new AST.Block([
-    new AST.FunctionDeclaration('fact', ['n'],
+    new AST.FunctionDeclaration('fact', ['n'], 1,
       new AST.Block([
         new AST.VariableDeclaration('acc'),
         new AST.AssignmentExpression('acc', new AST.IntegerLiteral(1)),
@@ -421,27 +419,60 @@ const bytecode2 = AST.compile(
         new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
       ]),
     ),
-  ]),
-);
-
-const bytecode = AST.compile(
-  new AST.Block([
-    new AST.FunctionDeclaration('test', [], new AST.Block([
-      new AST.VariableDeclaration('a'),
-      new AST.IfStatement(
-        new AST.IntegerLiteral(1),
-        new AST.AssignmentExpression('a', new AST.IntegerLiteral(2)),
-        new AST.AssignmentExpression('a', new AST.IntegerLiteral(3)),
-      ),
-      new AST.ReturnStatement(new AST.IdentifierExpression('a')),
-    ])),
-
-    new AST.CallExpression('test', []),
+    new AST.CallExpression('fact', [new AST.IntegerLiteral(3)]),
     new AST.HaltStatement(),
   ]),
 );
 
 
-console.log(bytecode);
-console.log(disassemble(bytecode) || ' ');
-console.log('result', evaluate(bytecode));
+/*
+
+function fact(n, acc) {
+  if n == 0 {
+    return acc;
+  }
+  return fact(n - 1, acc * n);
+}
+
+fact(10, 1);
+
+*/
+
+const factRecursiveAST = new AST.Bytecode().compile(
+  new AST.Block([
+    new AST.FunctionDeclaration('fact', ['n', 'acc'], 0, new AST.Block([
+      new AST.IfStatement(
+        new AST.BinaryExpression(
+          new AST.IdentifierExpression('n'),
+          '==',
+          new AST.IntegerLiteral(0),
+        ),
+        new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
+        new AST.ReturnStatement(new AST.CallExpression('fact', [
+          new AST.BinaryExpression(
+            new AST.IdentifierExpression('n'),
+            '-',
+            new AST.IntegerLiteral(1),
+          ),
+          new AST.BinaryExpression(
+            new AST.IdentifierExpression('acc'),
+            '*',
+            new AST.IdentifierExpression('n'),
+          ),
+        ])),
+      ),
+    ])),
+
+    new AST.CallExpression('fact', [
+      new AST.IntegerLiteral(3),
+      new AST.IntegerLiteral(1),
+    ]),
+  ]),
+);
+
+
+for (const bc of [factIterativeAST, factRecursiveAST]) {
+  console.log(bc);
+  console.log(disassemble(bc) || ' ');
+  console.log('result', evaluate(bc));
+}
