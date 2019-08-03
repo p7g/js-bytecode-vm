@@ -52,6 +52,11 @@ function evaluate(instructions) {
   let op;
   while (true) {
     op = read();
+
+    if (op === undefined) {
+      op = OpCodes.OP_HALT;
+    }
+
     log('\n' + JSON.stringify(stack.slice(0, sp)) + '\n');
     log(`ip:${ip} sp:${sp} bp:${bp} ${instructionNames[op]}`);
     switch (op) {
@@ -420,7 +425,6 @@ const factIterativeAST = new AST.Bytecode().compile(
       ]),
     ),
     new AST.CallExpression('fact', [new AST.IntegerLiteral(10)]),
-    new AST.HaltStatement(),
   ]),
 );
 
@@ -467,7 +471,6 @@ const factRecursiveAST = new AST.Bytecode().compile(
       new AST.IntegerLiteral(10),
       new AST.IntegerLiteral(1),
     ]),
-    new AST.HaltStatement(),
   ]),
 );
 

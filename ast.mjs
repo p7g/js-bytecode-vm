@@ -248,12 +248,6 @@ export class UnaryExpression {
   }
 }
 
-export class HaltStatement {
-  compile(ctx) {
-    ctx.bc.write(OpCodes.OP_HALT);
-  }
-}
-
 export class IfStatement {
   constructor(pred, then, otherwise) {
     this.pred = pred;
