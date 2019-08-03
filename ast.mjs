@@ -1,4 +1,4 @@
-import { OpCodes } from './vm.mjs';
+import OpCodes from './opcode';
 
 export function compile(tree) {
   const bytecode = tree.compile(new Scope());
@@ -35,10 +35,12 @@ export function compile(tree) {
         accumulator.push();
         accumulator.push();
       }
+    } else {
+      accumulator.push(instruction);
     }
   }
 
-  return new Uint8Array(accumulator);
+  return accumulator;
 }
 
 class Label {
@@ -60,10 +62,15 @@ class Scope {
     this.bindings = new Map();
     this.parent = parent;
     this.index = 0;
+    this.paramIndex = 0;
   }
 
   nextIndex() {
     return this.index++;
+  }
+
+  nextParamIndex() {
+    return this.paramIndex++;
   }
 
   get(name) {
@@ -76,11 +83,27 @@ class Scope {
     return this.parent.get(name);
   }
 
-  declare(name) {
+  declareVariable(name) {
     if (this.bindings.has(name)) {
       throw new Error(`ReferenceError: redeclaring identifier ${name}`);
     }
-    this.bindings.set(name, this.nextIndex());
+    this.bindings.set(name, { type: 'variable', value: this.nextIndex() });
+  }
+
+  declareParameter(name) {
+    if (this.bindings.has(name)) {
+      throw new Error(`ReferenceError: redeclaring parameter ${name}`);
+    }
+    this.bindings.set(name, { type: 'parameter', value: this.nextParamIndex });
+  }
+
+  declareFunction(name) {
+    if (this.bindings.has(name)) {
+      throw new Error(`ReferenceError: redeclaring function ${name}`);
+    }
+    const label = new Label();
+    this.bindings.set(name, { type: 'function', value: label.address });
+    return label.label;
   }
 }
 
@@ -103,24 +126,24 @@ export class IntegerLiteral {
         break;
     }
 
-    return new Uint8Array(opcodes);
+    return opcodes;
   }
 }
 
 function binop(scope, lhs, rhs, op) {
-  return new Uint8Array([
+  return [
     ...lhs.compile(scope),
     ...rhs.compile(scope),
     op,
-  ]);
+  ];
 }
 
 function binop1(scope, lhs, rhs, op1, op) {
   if (lhs instanceof IntegerLiteral && lhs.value === 1) {
-    return new Uint8Array([...rhs.compile(scope), op1]);
+    return [...rhs.compile(scope), op1];
   }
   if (rhs instanceof IntegerLiteral && rhs.value === 1) {
-    return new Uint8Array([...lhs.compile(scope), op1]);
+    return [...lhs.compile(scope), op1];
   }
   return binop(scope, lhs, rhs, op);
 }
@@ -155,6 +178,8 @@ export class BinaryExpression {
         return binop(scope, lhs, rhs, OpCodes.OP_EQ);
       case '!=':
         return binop(scope, lhs, rhs, OpCodes.OP_NE);
+      default:
+        throw new Error(`Unknown operator ${this.op}`);
     }
   }
 }
@@ -174,18 +199,20 @@ export class UnaryExpression {
       case '~':
         op = OpCodes.OP_NOT;
         break;
+      default:
+        throw new Error(`Unrecognized unary operator ${this.op}`);
     }
 
-    return new Uint8Array([
+    return [
       ...this.expr.compile(scope),
       op,
-    ]);
+    ];
   }
 }
 
 export class HaltStatement {
   compile() {
-    return new Uint8Array([OpCodes.OP_HALT]);
+    return [OpCodes.OP_HALT];
   }
 }
 
@@ -202,7 +229,7 @@ export class IfStatement {
 
     const innerScope = new Scope(scope);
 
-    return new Uint8Array([
+    return [
       ...this.pred.compile(innerScope),
       OpCodes.OP_FJMP,
       otherwise.address,
@@ -212,7 +239,46 @@ export class IfStatement {
       otherwise.label,
       ...this.otherwise.compile(innerScope),
       end.label,
-    ]);
+    ];
+  }
+}
+
+export class AssignmentExpression {
+  constructor(target, value) {
+    this.target = target;
+    this.value = value;
+  }
+
+  compile(scope) {
+    const { type, value } = scope.get(this.target);
+
+    let ops;
+    if (type === 'variable') {
+      if (value === 0) {
+        ops = [OpCodes.OP_SET0];
+      } else if (value === 1) {
+        ops = [OpCodes.OP_SET1];
+      } else {
+        ops = [OpCodes.OP_SET, value & 0xff00, value & 0xff];
+      }
+    } else if (type === 'parameter') {
+      if (value === 0) {
+        ops = [OpCodes.OP_SETARG0];
+      } else if (value === 1) {
+        ops = [OpCodes.OP_SETARG1];
+      } else {
+        ops = [OpCodes.OP_SETARG, value & 0xff00, value & 0xff];
+      }
+    } else {
+      throw new Error(
+        `TypeError: ${this.target} is not a valid assignment target`,
+      );
+    }
+
+    return [
+      ...this.value.compile(scope),
+      ...ops,
+    ];
   }
 }
 
@@ -226,7 +292,9 @@ export class WhileStatement {
     const top = new Label();
     const exit = new Label();
 
-    return new Uint8Array([
+    const innerScope = new Scope(scope);
+
+    return [
       top.label,
       ...this.pred.compile(scope),
       OpCodes.OP_FJMP,
@@ -234,7 +302,7 @@ export class WhileStatement {
       ...this.body.compile(innerScope),
       top.address,
       exit.label,
-    ]);
+    ];
   }
 }
 
@@ -244,8 +312,130 @@ export class Block {
   }
 
   compile(scope) {
-    const innerScope = new Scope(scope);
+    // const innerScope = new Scope(scope);
+    let accumulator = [];
 
-    return new Uint8Array(this.statements.flatMap(s => s.compile(innerScope)));
+    for (const statement of this.statements) {
+      accumulator = accumulator.concat(statement.compile(scope));
+    }
+
+    return accumulator;
+  }
+}
+
+export class FunctionDeclaration {
+  constructor(name, params, body) {
+    this.name = name;
+    this.params = params;
+    this.body = body;
+  }
+
+  compile(scope) {
+    const innerScope = new Scope(scope);
+    const skip = new Label();
+
+    for (const param of this.params) {
+      innerScope.declareParameter(param);
+    }
+
+    const body = this.body.compile(innerScope);
+    const functionLabel = scope.declareFunction(this.name);
+
+    return [
+      OpCodes.OP_JMP,
+      skip.address,
+      functionLabel.label,
+      ...Array(innerScope.index).fill().map(() => OpCodes.OP_CONST0),
+      ...body,
+      skip.label,
+    ];
+  }
+}
+
+export class VariableDeclaration {
+  constructor(name) {
+    this.name = name;
+  }
+
+  compile(scope) {
+    scope.declareVariable(this.name);
+    return [];
+  }
+}
+
+export class IdentifierExpression {
+  constructor(name) {
+    this.name = name;
+  }
+
+  compile(scope) {
+    const { type, value } = scope.get(this.name);
+
+    let ops;
+    switch (type) {
+      case 'variable':
+        if (value === 0) {
+          ops = [OpCodes.OP_LOAD0];
+        } else if (value === 1) {
+          ops = [OpCodes.OP_LOAD1];
+        } else {
+          ops = [OpCodes.OP_LOAD, value & 0xff00, value & 0xff];
+        }
+        break;
+
+      case 'parameter':
+        if (value === 0) {
+          ops = [OpCodes.OP_LOADARG0];
+        } else if (value === 1) {
+          ops = [OpCodes.OP_LOADARG1];
+        } else {
+          ops = [OpCodes.OP_LOADARG, value & 0xff00, value & 0xff];
+        }
+        break;
+
+      case 'function':
+        throw new Error(`TypeError: can't load function ${this.name}`);
+
+      default:
+        throw new Error('unreachable');
+    }
+
+    return ops;
+  }
+}
+
+export class CallExpression {
+  constructor(name, args) {
+    this.name = name;
+    this.args = args;
+  }
+
+  compile(scope) {
+    const { args } = this;
+    args.reverse();
+
+    const { type, value: fnLabel } = scope.get(this.name);
+    if (type !== 'function') {
+      throw new Error(`TypeError: cannot call ${this.name} as a function`);
+    }
+
+    return [
+      ...args.flatMap(a => a.compile(scope)),
+      OpCodes.OP_CALL,
+      fnLabel.address,
+    ];
+  }
+}
+
+export class ReturnStatement {
+  constructor(value) {
+    this.value = value;
+  }
+
+  compile(scope) {
+    return [
+      ...this.value.compile(scope),
+      OpCodes.OP_RET,
+    ];
   }
 }

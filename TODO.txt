@@ -1,0 +1,7 @@
+TODO
+----
+
+- jump address calculations are wrong
+- NaN address for function calls
+- handle variable declarations outside of functions
+- implicit halt (halt should not be a part of the AST)

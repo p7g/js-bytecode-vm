@@ -1,51 +1,5 @@
-let _inst = 0;
-function inst() {
-  if (_inst >= 256) {
-    throw new Error('Too many opcodes');
-  }
-  return _inst++;
-}
-
-export const OpCodes = {
-  OP_HALT: inst(),
-  OP_CONST: inst(),
-  OP_CONST0: inst(),
-  OP_CONST1: inst(),
-  OP_LOAD: inst(),
-  OP_LOAD0: inst(),
-  OP_LOAD1: inst(),
-  OP_LOADARG: inst(),
-  OP_LOADARG0: inst(),
-  OP_LOADARG1: inst(),
-  OP_SET: inst(),
-  OP_SET0: inst(),
-  OP_SET1: inst(),
-  OP_SETARG: inst(),
-  OP_SETARG0: inst(),
-  OP_SETARG1: inst(),
-  OP_ADD: inst(),
-  OP_ADD1: inst(),
-  OP_SUB: inst(),
-  OP_SUB1: inst(),
-  OP_MUL: inst(),
-  OP_DIV: inst(),
-  OP_NEG: inst(),
-  OP_AND: inst(),
-  OP_OR: inst(),
-  OP_NOT: inst(),
-  OP_EQ: inst(),
-  OP_NE: inst(),
-  OP_LT: inst(),
-  OP_GT: inst(),
-  OP_JMP: inst(),
-  OP_TJMP: inst(),
-  OP_FJMP: inst(),
-  OP_CALL: inst(),
-  OP_RET: inst(),
-};
-
-const instructionNames = [];
-Object.entries(OpCodes).forEach(([k, v]) => (instructionNames[v] = k));
+import OpCodes from './opcode';
+import { instructionNames, disassemble } from './disassemble';
 
 function log(...args) {
   if (false) {
@@ -59,7 +13,7 @@ function evaluate(instructions) {
   let bp = 0;
   let sp = 0;
 
-  const push = n => (stack[sp++] = n);
+  const push = (n) => { stack[sp++] = n; };
 
   function pop() {
     const value = stack[--sp];
@@ -431,19 +385,63 @@ debugger;
 // console.log(evaluate(factRecursive(10)));
 // console.log(evaluate(factIterative(10)));
 
-import {
-  compile,
-  Block,
-  IntegerLiteral,
-  BinaryExpression,
-  HaltStatement,
-} from './ast';
+import * as AST from './ast';
 
-console.log('integer literal', new IntegerLiteral(1).compile());
-
-console.log(compile(
-  new Block([
-    new BinaryExpression(new IntegerLiteral(1), '+', new IntegerLiteral(1)),
-    new HaltStatement(),
+const bytecode2 = AST.compile(
+  new AST.Block([
+    new AST.FunctionDeclaration('fact', ['n'],
+      new AST.Block([
+        new AST.VariableDeclaration('acc'),
+        new AST.AssignmentExpression('acc', new AST.IntegerLiteral(1)),
+        new AST.WhileStatement(
+          new AST.BinaryExpression(
+            new AST.IdentifierExpression('n'),
+            '>',
+            new AST.IntegerLiteral(0),
+          ),
+          new AST.Block([
+            new AST.AssignmentExpression(
+              'acc',
+              new AST.BinaryExpression(
+                new AST.IdentifierExpression('acc'),
+                '*',
+                new AST.IdentifierExpression('n'),
+              ),
+            ),
+            new AST.AssignmentExpression(
+              'n',
+              new AST.BinaryExpression(
+                new AST.IdentifierExpression('n'),
+                '-',
+                new AST.IntegerLiteral(1),
+              ),
+            ),
+          ]),
+        ),
+        new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
+      ]),
+    ),
   ]),
-));
+);
+
+const bytecode = AST.compile(
+  new AST.Block([
+    new AST.FunctionDeclaration('test', [], new AST.Block([
+      new AST.VariableDeclaration('a'),
+      new AST.IfStatement(
+        new AST.IntegerLiteral(1),
+        new AST.AssignmentExpression('a', new AST.IntegerLiteral(2)),
+        new AST.AssignmentExpression('a', new AST.IntegerLiteral(3)),
+      ),
+      new AST.ReturnStatement(new AST.IdentifierExpression('a')),
+    ])),
+
+    new AST.CallExpression('test', []),
+    new AST.HaltStatement(),
+  ]),
+);
+
+
+console.log(bytecode);
+console.log(disassemble(bytecode) || ' ');
+console.log('result', evaluate(bytecode));
