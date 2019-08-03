@@ -6,7 +6,7 @@ function inst() {
   return _inst++;
 }
 
-const OpCodes = {
+export const OpCodes = {
   OP_HALT: inst(),
   OP_CONST: inst(),
   OP_CONST0: inst(),
