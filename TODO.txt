@@ -1,7 +1,9 @@
 TODO
 ----
 
-- jump address calculations are wrong
-- NaN address for function calls
 - handle variable declarations outside of functions
+    - actually, variable declaration should be handled by blocks
 - implicit halt (halt should not be a part of the AST)
+- return seems to be broken
+    - not sure if pointers are restored properly
+    - arguments aren't consumed maybe?
