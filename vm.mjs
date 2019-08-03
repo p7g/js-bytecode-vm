@@ -428,5 +428,22 @@ const factIterative = n => new Uint8Array([
 ]);
 
 debugger;
-console.log(evaluate(factRecursive(10)));
-console.log(evaluate(factIterative(10)));
+// console.log(evaluate(factRecursive(10)));
+// console.log(evaluate(factIterative(10)));
+
+import {
+  compile,
+  Block,
+  IntegerLiteral,
+  BinaryExpression,
+  HaltStatement,
+} from './ast';
+
+console.log('integer literal', new IntegerLiteral(1).compile());
+
+console.log(compile(
+  new Block([
+    new BinaryExpression(new IntegerLiteral(1), '+', new IntegerLiteral(1)),
+    new HaltStatement(),
+  ]),
+));
