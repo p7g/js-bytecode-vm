@@ -369,13 +369,18 @@ export class FunctionDeclaration {
 }
 
 export class VariableDeclaration {
-  constructor(name) {
+  constructor(name, value = null) {
     this.name = name;
+    this.value = value;
   }
 
   compile(ctx) {
     ctx.scope.declareVariable(this.name);
-    return [];
+    if (this.value !== null) {
+      this.value.compile(ctx);
+    } else {
+      new IntegerLiteral(0).compile(ctx);
+    }
   }
 }
 
