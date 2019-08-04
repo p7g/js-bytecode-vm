@@ -17,12 +17,7 @@ function evaluate(instructions) {
   let sp = 0;
 
   const push = (n) => { stack[sp++] = n; };
-
-  function pop() {
-    const value = stack[--sp];
-    stack.pop();
-    return value;
-  }
+  const pop = () => stack[--sp];
 
   function read() {
     return instructions[ip++];
@@ -478,5 +473,7 @@ const factRecursiveAST = new AST.Bytecode().compile(
 for (const bc of [factIterativeAST, factRecursiveAST]) {
   console.log(bc);
   console.log(disassemble(bc) || ' ');
+  console.time('run');
   console.log('result', evaluate(bc));
+  console.timeEnd('run');
 }
