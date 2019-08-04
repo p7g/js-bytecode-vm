@@ -2,7 +2,7 @@ import OpCodes from './opcode.mjs';
 import { instructionNames, disassemble } from './disassemble.mjs';
 import * as AST from './ast.mjs';
 
-const DEBUG = false;
+const DEBUG = true;
 
 function log(...args) {
   if (DEBUG) {
@@ -34,15 +34,34 @@ function evaluate(instructions) {
     return value;
   }
 
+  function newScope() {
+    push(bp);
+    bp = sp;
+  }
+
+  function endScope() {
+    sp = bp;
+    bp = pop();
+  }
+
+  function findBase(n) {
+    let base = bp;
+    while (n > 0) {
+      base = stack[base - 1];
+      n -= 1;
+    }
+    return base;
+  }
+
   // minus 3 to account for stored bp and ip
-  function argOffset(n) {
-    const value = bp - 3 - n;
+  function argOffset(n, scopeNum) {
+    const value = findBase(scopeNum) - 4 - n;
     log(`	argOffset:${value}`);
     return value;
   }
 
-  function localOffset(n) {
-    const value = bp + n;
+  function localOffset(n, scopeNum) {
+    const value = findBase(scopeNum) + n;
     log(`	localOffset:${value}`);
     return value;
   }
@@ -76,51 +95,51 @@ function evaluate(instructions) {
         break;
 
       case OpCodes.OP_LOAD:
-        push(stack[localOffset(read16())]);
+        push(stack[localOffset(read16(), read16())]);
         break;
 
       case OpCodes.OP_LOAD0:
-        push(stack[localOffset(0)]);
+        push(stack[localOffset(0, read16())]);
         break;
 
       case OpCodes.OP_LOAD1:
-        push(stack[localOffset(1)]);
+        push(stack[localOffset(1, read16())]);
         break;
 
       case OpCodes.OP_LOADARG:
-        push(stack[argOffset(read16())]);
+        push(stack[argOffset(read16(), read16())]);
         break;
 
       case OpCodes.OP_LOADARG0:
-        push(stack[argOffset(0)]);
+        push(stack[argOffset(0, read16())]);
         break;
 
       case OpCodes.OP_LOADARG1:
-        push(stack[argOffset(1)]);
+        push(stack[argOffset(1, read16())]);
         break;
 
       case OpCodes.OP_SET:
-        stack[localOffset(read16())] = pop();
+        stack[localOffset(read16(), read16())] = pop();
         break;
 
       case OpCodes.OP_SET0:
-        stack[localOffset(0)] = pop();
+        stack[localOffset(0, read16())] = pop();
         break;
 
       case OpCodes.OP_SET1:
-        stack[localOffset(1)] = pop();
+        stack[localOffset(1, read16())] = pop();
         break;
 
       case OpCodes.OP_SETARG:
-        stack[argOffset(read16())] = pop();
+        stack[argOffset(read16(), read16())] = pop();
         break;
 
       case OpCodes.OP_SETARG0:
-        stack[argOffset(0)] = pop();
+        stack[argOffset(0, read16())] = pop();
         break;
 
       case OpCodes.OP_SETARG1:
-        stack[argOffset(1)] = pop();
+        stack[argOffset(1, read16())] = pop();
         break;
 
       case OpCodes.OP_ADD: {
@@ -223,19 +242,25 @@ function evaluate(instructions) {
         break;
       }
 
+      case OpCodes.OP_NEWSCOPE:
+        newScope();
+        break;
+
+      case OpCodes.OP_ENDSCOPE:
+        endScope();
+        break;
+
       case OpCodes.OP_CALL: {
         const targetIp = read16();
         push(ip);
-        push(bp);
         ip = targetIp;
-        bp = sp;
+        newScope();
         break;
       }
 
       case OpCodes.OP_RET: {
         const retval = pop();
-        sp = bp;
-        bp = pop();
+        endScope();
         ip = pop();
         push(retval);
         break;
@@ -390,43 +415,38 @@ const factIterative = n => new Uint8Array([
 ]);
 
 
-const factIterativeAST = new AST.Bytecode().compile(
-  new AST.Block([
-    new AST.FunctionDeclaration('fact', ['n'], 1,
+const factIterativeAST = new AST.Bytecode().compile([
+  new AST.FunctionDeclaration('fact', ['n'], [
+    new AST.VariableDeclaration('acc', new AST.IntegerLiteral(1)),
+    new AST.WhileStatement(
+      new AST.BinaryExpression(
+        new AST.IdentifierExpression('n'),
+        '>',
+        new AST.IntegerLiteral(0),
+      ),
       new AST.Block([
-        new AST.VariableDeclaration('acc'),
-        new AST.AssignmentExpression('acc', new AST.IntegerLiteral(1)),
-        new AST.WhileStatement(
+        new AST.AssignmentExpression(
+          'acc',
+          new AST.BinaryExpression(
+            new AST.IdentifierExpression('acc'),
+            '*',
+            new AST.IdentifierExpression('n'),
+          ),
+        ),
+        new AST.AssignmentExpression(
+          'n',
           new AST.BinaryExpression(
             new AST.IdentifierExpression('n'),
-            '>',
-            new AST.IntegerLiteral(0),
+            '-',
+            new AST.IntegerLiteral(1),
           ),
-          new AST.Block([
-            new AST.AssignmentExpression(
-              'acc',
-              new AST.BinaryExpression(
-                new AST.IdentifierExpression('acc'),
-                '*',
-                new AST.IdentifierExpression('n'),
-              ),
-            ),
-            new AST.AssignmentExpression(
-              'n',
-              new AST.BinaryExpression(
-                new AST.IdentifierExpression('n'),
-                '-',
-                new AST.IntegerLiteral(1),
-              ),
-            ),
-          ]),
         ),
-        new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
       ]),
     ),
-    new AST.CallExpression('fact', [new AST.IntegerLiteral(10)]),
+    new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
   ]),
-);
+  new AST.CallExpression('fact', [new AST.IntegerLiteral(3)]),
+]);
 
 
 /*
@@ -442,40 +462,56 @@ fact(10, 1);
 
 */
 
-const factRecursiveAST = new AST.Bytecode().compile(
-  new AST.Block([
-    new AST.FunctionDeclaration('fact', ['n', 'acc'], 0, new AST.Block([
-      new AST.IfStatement(
+const factRecursiveAST = new AST.Bytecode().compile([
+  new AST.FunctionDeclaration('fact', ['n', 'acc'], [
+    new AST.IfStatement(
+      new AST.BinaryExpression(
+        new AST.IdentifierExpression('n'),
+        '==',
+        new AST.IntegerLiteral(0),
+      ),
+      new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
+      new AST.ReturnStatement(new AST.CallExpression('fact', [
         new AST.BinaryExpression(
           new AST.IdentifierExpression('n'),
-          '==',
-          new AST.IntegerLiteral(0),
+          '-',
+          new AST.IntegerLiteral(1),
         ),
-        new AST.ReturnStatement(new AST.IdentifierExpression('acc')),
-        new AST.ReturnStatement(new AST.CallExpression('fact', [
-          new AST.BinaryExpression(
-            new AST.IdentifierExpression('n'),
-            '-',
-            new AST.IntegerLiteral(1),
-          ),
-          new AST.BinaryExpression(
-            new AST.IdentifierExpression('acc'),
-            '*',
-            new AST.IdentifierExpression('n'),
-          ),
-        ])),
-      ),
-    ])),
+        new AST.BinaryExpression(
+          new AST.IdentifierExpression('acc'),
+          '*',
+          new AST.IdentifierExpression('n'),
+        ),
+      ])),
+    ),
+  ]),
 
-    new AST.CallExpression('fact', [
-      new AST.IntegerLiteral(10),
-      new AST.IntegerLiteral(1),
+  new AST.CallExpression('fact', [
+    new AST.IntegerLiteral(3),
+    new AST.IntegerLiteral(1),
+  ]),
+]);
+
+
+const testAST = new AST.Bytecode().compile([
+  new AST.VariableDeclaration('a'),
+  new AST.VariableDeclaration('b', new AST.IntegerLiteral(3)),
+  new AST.Block([
+    new AST.VariableDeclaration('a', new AST.IntegerLiteral(1)),
+    new AST.Block([
+      new AST.VariableDeclaration('a', new AST.IntegerLiteral(4)),
+      new AST.AssignmentExpression('b', new AST.BinaryExpression(
+        new AST.IdentifierExpression('a'),
+        '+',
+        new AST.IntegerLiteral(1),
+      )),
     ]),
   ]),
-);
+  new AST.IdentifierExpression('b'),
+]);
 
 
-for (const bc of [factIterativeAST, factRecursiveAST]) {
+for (const bc of [factIterativeAST, factRecursiveAST, testAST]) {
   console.log(bc);
   console.log(disassemble(bc) || ' ');
   console.log('result', evaluate(bc));

@@ -1,4 +1,4 @@
-import { assert } from './utils.mjs';
+import { assert, num2bytes } from './utils.mjs';
 import OpCodes from './opcode.mjs';
 
 class Scope {
@@ -17,14 +17,14 @@ class Scope {
     return this.paramIndex++;
   }
 
-  get(name) {
+  get(name, num = 0) {
     if (this.bindings.has(name)) {
-      return this.bindings.get(name);
+      return { ...this.bindings.get(name), scopeNum: num };
     }
     if (this.parent === null) {
       throw new Error(`ReferenceError: undefined name ${name}`);
     }
-    return this.parent.get(name);
+    return this.parent.get(name, num + 1);
   }
 
   declareVariable(name) {
@@ -130,8 +130,13 @@ export class Bytecode {
     return new Label(this);
   }
 
-  compile(tree) {
-    tree.compile(new Context(this, new Scope()));
+  compile(nodes) {
+    const ctx = new Context(this, new Scope());
+
+    for (const node of nodes) {
+      node.compile(ctx);
+    }
+
     return this.instructions;
   }
 }
@@ -278,7 +283,7 @@ export class AssignmentExpression {
   }
 
   compile(ctx) {
-    const { type, value } = ctx.scope.get(this.target);
+    const { type, value, scopeNum } = ctx.scope.get(this.target);
 
     let ops;
     if (type === 'variable') {
@@ -304,7 +309,7 @@ export class AssignmentExpression {
     }
 
     this.value.compile(ctx);
-    ctx.write(ops);
+    ctx.write([...ops, ...num2bytes(scopeNum)]);
   }
 }
 
@@ -335,16 +340,17 @@ export class Block {
   }
 
   compile(ctx) {
-    // const innerScope = new Scope(scope);
-    this.statements.forEach(s => s.compile(ctx));
+    const innerCtx = ctx.withNewScope();
+    ctx.bc.write(OpCodes.OP_NEWSCOPE);
+    this.statements.forEach(s => s.compile(innerCtx));
+    ctx.bc.write(OpCodes.OP_ENDSCOPE);
   }
 }
 
 export class FunctionDeclaration {
-  constructor(name, params, localCount, body) {
+  constructor(name, params, body) {
     this.name = name;
     this.params = params;
-    this.localCount = localCount;
     this.body = body;
   }
 
@@ -362,8 +368,11 @@ export class FunctionDeclaration {
     ctx.bc.write(OpCodes.OP_JMP);
     skip.address();
     functionLabel.label();
-    ctx.write(Array(this.localCount).fill().map(() => OpCodes.OP_CONST0));
-    this.body.compile(innerCtx);
+    ctx.bc.write(OpCodes.OP_NEWSCOPE);
+    for (const statement of this.body) {
+      statement.compile(innerCtx);
+    }
+    ctx.bc.write(OpCodes.OP_ENDSCOPE);
     skip.label();
   }
 }
@@ -390,7 +399,7 @@ export class IdentifierExpression {
   }
 
   compile(ctx) {
-    const { type, value } = ctx.scope.get(this.name);
+    const { type, value, scopeNum } = ctx.scope.get(this.name);
 
     let ops;
     switch (type) {
@@ -421,7 +430,7 @@ export class IdentifierExpression {
         throw new Error('unreachable');
     }
 
-    ctx.write(ops);
+    ctx.write([...ops, ...num2bytes(scopeNum)]);
   }
 }
 

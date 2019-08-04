@@ -26,18 +26,50 @@ export function disassemble(bytecode_) {
         break;
 
       case OpCodes.OP_LOAD:
+        buf += ' ' + read16() + ' ' + read16();
+        break;
+
+      case OpCodes.OP_LOAD0:
+        buf += ' ' + read16();
+        break;
+
+      case OpCodes.OP_LOAD1:
         buf += ' ' + read16();
         break;
 
       case OpCodes.OP_LOADARG:
+        buf += ' ' + read16() + ' ' + read16();
+        break;
+
+      case OpCodes.OP_LOADARG0:
+        buf += ' ' + read16();
+        break;
+
+      case OpCodes.OP_LOADARG1:
         buf += ' ' + read16();
         break;
 
       case OpCodes.OP_SET:
+        buf += ' ' + read16() + ' ' + read16();
+        break;
+
+      case OpCodes.OP_SET0:
+        buf += ' ' + read16();
+        break;
+
+      case OpCodes.OP_SET1:
         buf += ' ' + read16();
         break;
 
       case OpCodes.OP_SETARG:
+        buf += ' ' + read16() + ' ' + read16();
+        break;
+
+      case OpCodes.OP_SETARG0:
+        buf += ' ' + read16();
+        break;
+
+      case OpCodes.OP_SETARG1:
         buf += ' ' + read16();
         break;
 

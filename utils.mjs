@@ -5,3 +5,7 @@ export function assert(cond, msg) {
     throw new AssertionError(msg);
   }
 }
+
+export function num2bytes(n) {
+  return [n & 0xff00, n & 0xff];
+}
