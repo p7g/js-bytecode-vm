@@ -1,1 +1,3 @@
 node_modules
+include/grammar.js
+grammar/grammar.html
