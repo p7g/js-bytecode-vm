@@ -6,4 +6,4 @@ run:
 
 .PHONY: debug
 debug:
-	node $(NODEFLAGS) inspect vm.mjs
+	node inspect $(NODEFLAGS) vm.mjs
