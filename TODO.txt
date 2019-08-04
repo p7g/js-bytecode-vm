@@ -3,6 +3,9 @@ TODO
 
 - handle variable declarations outside of functions
     - actually, variable declaration should be handled by blocks
+- closures
+    - find the free variables of a function and move them to memory somewhere
+    - this will likely require more value types than int
 - there is still a sorta memory leak where things aren't removed from the stack
     - since OP_RET just sets the stack pointer to the base pointer, we don't pop
       all the stuff after the base pointer off
