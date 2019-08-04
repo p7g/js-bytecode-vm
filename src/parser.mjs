@@ -16,4 +16,4 @@ const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
 
 parser.feed(test);
 
-console.log(parser.results);
+console.log(parser.results); // eslint-disable-line no-console

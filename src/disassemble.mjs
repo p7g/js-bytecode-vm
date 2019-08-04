@@ -22,71 +22,71 @@ export function disassemble(bytecode_) {
 
     switch (instruction) {
       case OpCodes.OP_CONST:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_LOAD:
-        buf += ' ' + read16() + ' ' + read16();
+        buf += ` ${read16()} ${read16()}`;
         break;
 
       case OpCodes.OP_LOAD0:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_LOAD1:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_LOADARG:
-        buf += ' ' + read16() + ' ' + read16();
+        buf += ` ${read16()} ${read16()}`;
         break;
 
       case OpCodes.OP_LOADARG0:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_LOADARG1:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_SET:
-        buf += ' ' + read16() + ' ' + read16();
+        buf += ` ${read16()} ${read16()}`;
         break;
 
       case OpCodes.OP_SET0:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_SET1:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_SETARG:
-        buf += ' ' + read16() + ' ' + read16();
+        buf += ` ${read16()} ${read16()}`;
         break;
 
       case OpCodes.OP_SETARG0:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_SETARG1:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_JMP:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_TJMP:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_FJMP:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       case OpCodes.OP_CALL:
-        buf += ' ' + read16();
+        buf += ` ${read16()}`;
         break;
 
       default:
@@ -95,6 +95,6 @@ export function disassemble(bytecode_) {
         }
         break;
     }
-    console.log(buf);
+    console.log(buf); // eslint-disable-line no-console
   }
 }

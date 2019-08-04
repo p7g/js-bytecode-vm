@@ -6,7 +6,7 @@ const DEBUG = false;
 
 function log(...args) {
   if (DEBUG) {
-    console.log(...args);
+    console.log(...args); // eslint-disable-line no-console
   }
 }
 
@@ -64,14 +64,14 @@ function evaluate(instructions) {
   const topOffset = () => sp - 1;
 
   let op;
-  while (true) {
+  for (;;) {
     op = read();
 
     if (op === undefined) {
       op = OpCodes.OP_HALT;
     }
 
-    log('\n' + JSON.stringify(stack.slice(0, sp)) + '\n');
+    log(`\n${JSON.stringify(stack.slice(0, sp))}\n`);
     log(`ip:${ip} sp:${sp} bp:${bp} ${instructionNames[op]}`);
     switch (op) {
       case OpCodes.OP_HALT:
@@ -282,13 +282,13 @@ function fact(n, acc) {
 
 fact(10, 1);
 
-=== 
+===
 
 const 1
 const n
 call fact
 halt
- 
+
 .fact 2
 const 0
 loadarg 0
@@ -304,8 +304,6 @@ loadarg 0
 sub1
 call fact
 ret
-
-*/
 
 const factRecursive = n => new Uint8Array([
   // arguments for fact:
@@ -344,8 +342,6 @@ const factRecursive = n => new Uint8Array([
   OpCodes.OP_RET,
 ]);
 
-/*
-
 function fact_iterative(n) {
   let acc = 1;
   while (n > 0) {
@@ -379,8 +375,6 @@ jmp .fact_iterative_while
 load 0
 ret
 
-*/
-
 const factIterative = n => new Uint8Array([
   // load n, call fact, then halt
   OpCodes.OP_CONST, 0, n,
@@ -412,6 +406,8 @@ const factIterative = n => new Uint8Array([
   OpCodes.OP_LOAD0,
   OpCodes.OP_RET,
 ]);
+
+*/
 
 
 const factIterativeAST = new AST.Bytecode().compile([
@@ -515,9 +511,9 @@ const testAST = new AST.Bytecode().compile([
 
 
 for (const bc of [factIterativeAST, factRecursiveAST, testAST]) {
-  console.log(bc);
-  console.log(disassemble(bc) || ' ');
-  console.time('run');
-  console.log('result', evaluate(bc));
-  console.timeEnd('run');
+  log(bc);
+  log(disassemble(bc) || ' ');
+  console.time('run'); // eslint-disable-line no-console
+  log('result', evaluate(bc));
+  console.timeEnd('run'); // eslint-disable-line no-console
 }
