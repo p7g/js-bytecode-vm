@@ -40,6 +40,8 @@ export default {
   OP_JMP: inst(),
   OP_TJMP: inst(),
   OP_FJMP: inst(),
+  OP_NEWSCOPE: inst(),
+  OP_ENDSCOPE: inst(),
   OP_CALL: inst(),
   OP_RET: inst(),
 };
