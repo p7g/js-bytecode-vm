@@ -1,9 +1,9 @@
-import OpCodes from './opcode.mjs';
+const OpCodes = require('./opcode');
 
-export const instructionNames = [];
+const instructionNames = [];
 Object.entries(OpCodes).forEach(([k, v]) => { instructionNames[v] = k; });
 
-export function disassemble(bytecode_) {
+function disassemble(bytecode_) {
   const bytecode = [...bytecode_];
 
   let i = -1;
@@ -98,3 +98,8 @@ export function disassemble(bytecode_) {
     console.log(buf); // eslint-disable-line no-console
   }
 }
+
+module.exports = {
+  disassemble,
+  instructionNames,
+};

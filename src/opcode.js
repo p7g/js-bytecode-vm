@@ -6,7 +6,7 @@ function inst() {
   return _inst++;
 }
 
-export default {
+module.exports = {
   OP_HALT: inst(),
   OP_POP: inst(),
   OP_CONST: inst(),

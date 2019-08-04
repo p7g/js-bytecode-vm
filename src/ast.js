@@ -1,5 +1,5 @@
-import { assert, num2bytes } from './utils.mjs';
-import OpCodes from './opcode.mjs';
+const { assert, num2bytes } = require('./utils');
+const OpCodes = require('./opcode');
 
 class Scope {
   constructor(parent = null) {
@@ -102,7 +102,7 @@ class Label {
   }
 }
 
-export class Bytecode {
+class Bytecode {
   constructor() {
     this.instructions = [];
   }
@@ -141,7 +141,7 @@ export class Bytecode {
   }
 }
 
-export class IntegerLiteral {
+class IntegerLiteral {
   constructor(value) {
     this.value = value;
   }
@@ -182,7 +182,7 @@ function binop1(ctx, lhs, rhs, op1, op) {
   }
 }
 
-export class BinaryExpression {
+class BinaryExpression {
   constructor(lhs, op, rhs) {
     this.lhs = lhs;
     this.op = op;
@@ -229,7 +229,7 @@ export class BinaryExpression {
   }
 }
 
-export class UnaryExpression {
+class UnaryExpression {
   constructor(op, expr) {
     this.op = op;
     this.expr = expr;
@@ -253,7 +253,7 @@ export class UnaryExpression {
   }
 }
 
-export class IfStatement {
+class IfStatement {
   constructor(pred, then, otherwise) {
     this.pred = pred;
     this.then = then;
@@ -276,7 +276,7 @@ export class IfStatement {
   }
 }
 
-export class AssignmentExpression {
+class AssignmentExpression {
   constructor(target, value) {
     this.target = target;
     this.value = value;
@@ -313,7 +313,7 @@ export class AssignmentExpression {
   }
 }
 
-export class WhileStatement {
+class WhileStatement {
   constructor(pred, body) {
     this.pred = pred;
     this.body = body;
@@ -334,7 +334,7 @@ export class WhileStatement {
   }
 }
 
-export class Block {
+class Block {
   constructor(statements) {
     this.statements = statements;
   }
@@ -345,7 +345,7 @@ export class Block {
   }
 }
 
-export class FunctionDeclaration {
+class FunctionDeclaration {
   constructor(name, params, body) {
     this.name = name;
     this.params = params;
@@ -373,7 +373,7 @@ export class FunctionDeclaration {
   }
 }
 
-export class VariableDeclaration {
+class VariableDeclaration {
   constructor(name, value = null) {
     this.name = name;
     this.value = value;
@@ -389,7 +389,7 @@ export class VariableDeclaration {
   }
 }
 
-export class IdentifierExpression {
+class IdentifierExpression {
   constructor(name) {
     this.name = name;
   }
@@ -430,7 +430,7 @@ export class IdentifierExpression {
   }
 }
 
-export class ExpressionStatement {
+class ExpressionStatement {
   constructor(expr) {
     this.expr = expr;
   }
@@ -441,7 +441,7 @@ export class ExpressionStatement {
   }
 }
 
-export class CallExpression {
+class CallExpression {
   constructor(name, args) {
     this.name = name;
     this.args = args;
@@ -462,7 +462,7 @@ export class CallExpression {
   }
 }
 
-export class ReturnStatement {
+class ReturnStatement {
   constructor(value) {
     this.value = value;
   }
@@ -472,3 +472,20 @@ export class ReturnStatement {
     ctx.bc.write(OpCodes.OP_RET);
   }
 }
+
+module.exports = {
+  Bytecode,
+
+  AssignmentExpression,
+  BinaryExpression,
+  Block,
+  CallExpression,
+  ExpressionStatement,
+  FunctionDeclaration,
+  IdentifierExpression,
+  IfStatement,
+  ReturnStatement,
+  UnaryExpression,
+  VariableDeclaration,
+  WhileStatement,
+};

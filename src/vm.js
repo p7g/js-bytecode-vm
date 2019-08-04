@@ -1,6 +1,6 @@
-import OpCodes from './opcode.mjs';
-import { instructionNames, disassemble } from './disassemble.mjs';
-import * as AST from './ast.mjs';
+const OpCodes = require('./opcode');
+const { instructionNames, disassemble } = require('./disassemble');
+const AST = require('./ast');
 
 const DEBUG = false;
 
@@ -407,14 +407,12 @@ const factIterative = n => new Uint8Array([
   OpCodes.OP_RET,
 ]);
 
-*/
-
 
 const factIterativeAST = new AST.Bytecode().compile([
   new AST.FunctionDeclaration('fact', ['n'], [
     new AST.VariableDeclaration('acc', new AST.IntegerLiteral(1)),
     new AST.WhileStatement(
-      new AST.BinaryExpression(
+      new AST.Binarytxpression(
         new AST.IdentifierExpression('n'),
         '>',
         new AST.IntegerLiteral(0),
@@ -443,9 +441,6 @@ const factIterativeAST = new AST.Bytecode().compile([
   new AST.CallExpression('fact', [new AST.IntegerLiteral(10)]),
 ]);
 
-
-/*
-
 function fact(n, acc) {
   if n == 0 {
     return acc;
@@ -454,8 +449,6 @@ function fact(n, acc) {
 }
 
 fact(10, 1);
-
-*/
 
 const factRecursiveAST = new AST.Bytecode().compile([
   new AST.FunctionDeclaration('fact', ['n', 'acc'], [
@@ -517,3 +510,6 @@ for (const bc of [factIterativeAST, factRecursiveAST, testAST]) {
   log('result', evaluate(bc));
   console.timeEnd('run'); // eslint-disable-line no-console
 }
+*/
+
+module.exports = { evaluate };
