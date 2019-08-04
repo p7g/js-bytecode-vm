@@ -346,10 +346,9 @@ export class Block {
 }
 
 export class FunctionDeclaration {
-  constructor(name, params, localCount, body) {
+  constructor(name, params, body) {
     this.name = name;
     this.params = params;
-    this.localCount = localCount;
     this.body = body;
   }
 
@@ -367,12 +366,9 @@ export class FunctionDeclaration {
     ctx.bc.write(OpCodes.OP_JMP);
     skip.address();
     functionLabel.label();
-    ctx.write(Array(this.localCount).fill().map(() => OpCodes.OP_CONST0));
-    ctx.bc.write(OpCodes.OP_NEWSCOPE);
     for (const statement of this.body) {
       statement.compile(innerCtx);
     }
-    ctx.bc.write(OpCodes.OP_ENDSCOPE);
     skip.label();
   }
 }
