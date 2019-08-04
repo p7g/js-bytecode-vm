@@ -4,6 +4,8 @@
   "description": "This is a really basic VM, that supports functions and local variables. The only supported datatype is an integer. In the file, there are 2 implementations of a factorial function; one recursive, and one iterative. There is no parser or lexer, nor is there a language to go with the VM, so any code written for it needs to be in plain bytecode.",
   "main": "index.js",
   "scripts": {
+    "start": "node --experimental-modules vm.mjs",
+    "debug": "node inspect --experimental-modules vm.mjs",
     "lint": "eslint *.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
