@@ -434,6 +434,17 @@ export class IdentifierExpression {
   }
 }
 
+export class ExpressionStatement {
+  constructor(expr) {
+    this.expr = expr;
+  }
+
+  compile(ctx) {
+    this.expr.compile(ctx);
+    ctx.bc.write(OpCodes.OP_POP);
+  }
+}
+
 export class CallExpression {
   constructor(name, args) {
     this.name = name;

@@ -77,6 +77,10 @@ function evaluate(instructions) {
       case OpCodes.OP_HALT:
         return pop();
 
+      case OpCodes.OP_POP:
+        pop();
+        break;
+
       case OpCodes.OP_CONST:
         push(read16());
         break;

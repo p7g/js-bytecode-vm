@@ -8,6 +8,7 @@ function inst() {
 
 export default {
   OP_HALT: inst(),
+  OP_POP: inst(),
   OP_CONST: inst(),
   OP_CONST0: inst(),
   OP_CONST1: inst(),
