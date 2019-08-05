@@ -15,18 +15,17 @@ function isodd(n) {
     while (loopcond) {
         if (n == 0)
             loopcond = 0;
-        if (n == 1)
+        else if (n == 1)
             loopcond = 0;
-        if (loopcond)
+        else
             n = n - diff;
     }
     return n;
 }
 
-var f = fact(10);
-var o = isodd(f);
+var f = fact(5);
 
-if (o) {
+if (isodd(f)) {
     print(123);
 } else {
     print(234);
