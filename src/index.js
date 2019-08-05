@@ -3,6 +3,7 @@ const { promises: fs } = require('fs');
 const { evaluate } = require('./vm');
 const { parse } = require('./parser');
 const { Bytecode } = require('./ast');
+const { getIntrinsics } = require('./intrinsics');
 
 async function main() {
   const filename = process.argv[2];
@@ -13,9 +14,10 @@ async function main() {
 
   const contents = await fs.readFile(filename);
   const ast = parse(contents.toString());
-  const bytecode = new Bytecode().compile(ast);
+  const intrinsics = getIntrinsics();
+  const bytecode = new Bytecode(intrinsics).compile(ast);
 
-  console.log(evaluate(bytecode));
+  evaluate(intrinsics, bytecode);
 }
 
 main().catch(console.error); // eslint-disable-line no-console

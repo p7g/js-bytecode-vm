@@ -44,5 +44,6 @@ module.exports = {
   OP_NEWSCOPE: inst(),
   OP_ENDSCOPE: inst(),
   OP_CALL: inst(),
+  OP_CALLNATIVE: inst(),
   OP_RET: inst(),
 };

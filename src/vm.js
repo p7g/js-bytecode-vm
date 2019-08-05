@@ -10,7 +10,7 @@ function log(...args) {
   }
 }
 
-function evaluate(instructions) {
+function evaluate(environment, instructions) {
   const stack = [];
   let ip = 0;
   let bp = 0;
@@ -254,6 +254,17 @@ function evaluate(instructions) {
         push(ip);
         ip = targetIp;
         newScope();
+        break;
+      }
+
+      case OpCodes.OP_CALLNATIVE: {
+        const index = read16();
+        const fn = environment.getBuiltin(index);
+        const args = [];
+        for (let i = 0; i < fn.length; i += 1) {
+          args.push(pop());
+        }
+        push(fn(...args));
         break;
       }
 
