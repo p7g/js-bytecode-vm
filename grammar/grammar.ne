@@ -38,8 +38,9 @@ const lexer = moo.compile({
     identifier: {
         match: /[_a-zA-Z]\w*/,
         type: moo.keywords({
-            let_: 'let',
+            var_: 'var',
             if_: 'if',
+            function_: 'function',
             else_: 'else',
             while_: 'while',
             return_: 'return',
@@ -76,13 +77,13 @@ statement -> expressionStatement {% id %}
            | returnStatement {% id %}
            | declaration {% id %}
 
-functionDeclaration -> identifier %lparen parameterList %rparen block {%
-    function([name, , params, , body]) {
+functionDeclaration -> %function_ identifier %lparen parameterList %rparen block {%
+    function([, name, , params, , body]) {
         return new AST.FunctionDeclaration(name, params, body.statements);
     }
 %}
 
-variableDeclaration -> %let_ identifier ( %oneequal expression ):? %semicolon {%
+variableDeclaration -> %var_ identifier ( %oneequal expression ):? %semicolon {%
     function([, name, maybeExp]) {
         let exp = null;
         if (maybeExp !== null) {
