@@ -1,8 +1,8 @@
-const { promises: fs } = require('fs');
+const fs = require('fs');
 
 const { disassemble } = require('./disassemble');
 const { evaluate } = require('./vm');
-const { parse } = require('./parser');
+const Parser = require('./parser');
 const { Bytecode } = require('./ast');
 const { getIntrinsics } = require('./intrinsics');
 
@@ -13,12 +13,19 @@ async function main() {
     throw new Error('expected filename');
   }
 
-  const contents = await fs.readFile(filename);
-  const ast = parse(contents.toString());
+  const parser = new Parser();
+  const readStream = fs.createReadStream(filename);
+
+  for await (const data of readStream) {
+    parser.feed(data.toString());
+  }
+
+  const ast = parser.result;
+
   const intrinsics = getIntrinsics();
   const bytecode = new Bytecode(intrinsics).compile(ast);
 
-  //disassemble(bytecode);
+  disassemble(bytecode);
 
   evaluate(intrinsics, bytecode);
 }
