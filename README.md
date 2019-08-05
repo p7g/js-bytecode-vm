@@ -1,21 +1,21 @@
 # A small bytecode VM in javascript
 
-This is a really basic VM, that supports functions and local variables. The only
-supported datatype is an integer. In the file, there are 2 implementations of a
-factorial function; one recursive, and one iterative. There is no parser or
-lexer, nor is there a language to go with the VM, so any code written for it
-needs to be in plain bytecode.
+This is a pretty simple bytecode VM implemented in javascript. I have also
+written a little language to go with it and to try stuff out, though the
+semantics of that language are mostly defined by the abstract syntax tree, and
+the VM can be made to work very differently.
 
-The instruction set of the VM is at the very top of the file. There is lots of
-room for even basic optimizations, though I don't even have a rough idea of the
-performance of this thing.
+## How to
 
-To see some information while the VM is running, change the `false` in the log
-function to `true`.
+1. Compile the grammar by running `make`
+1. Check out the sweet railroad diagrams generated at `grammar/grammar.html`
+1. Write a cool script in a file (good luck figuring out how the language works)
+1. Run it `npm run start -- mycoolscript.jsbcvm`
 
 ## Next steps
 
-I think the next thing I will try and implement with this is global variables.
-Maybe before that I will throw together a lexer and parser to make generating
-code (much) easier. Later on down the line, if I feel like it, I might look into
-closures, but I have no clue where to start there.
+- objects
+  - also other datatypes
+- closures
+- builtin function cleanup
+- error handling
