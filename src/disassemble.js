@@ -89,6 +89,14 @@ function disassemble(bytecode_) {
         buf += ` ${read16()}`;
         break;
 
+      case OpCodes.OP_CALLNATIVE:
+        buf += ` ${read16()}`;
+        break;
+
+      case OpCodes.OP_RET:
+        buf += ` ${read16()}`;
+        break;
+
       default:
         if (!instructionNames[instruction]) {
           throw new Error(`Unknown opcode ${instruction}`);

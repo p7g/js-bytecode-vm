@@ -1,5 +1,6 @@
 const { promises: fs } = require('fs');
 
+const { disassemble } = require('./disassemble');
 const { evaluate } = require('./vm');
 const { parse } = require('./parser');
 const { Bytecode } = require('./ast');
@@ -16,6 +17,8 @@ async function main() {
   const ast = parse(contents.toString());
   const intrinsics = getIntrinsics();
   const bytecode = new Bytecode(intrinsics).compile(ast);
+
+  //disassemble(bytecode);
 
   evaluate(intrinsics, bytecode);
 }

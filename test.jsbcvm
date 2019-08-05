@@ -7,4 +7,27 @@ function fact(n) {
     return acc;
 }
 
-print(fact(10));
+function isodd(n) {
+    var diff = 2;
+    if (n < 0)
+        diff = -2;
+    var loopcond = 1;
+    while (loopcond) {
+        if (n == 0)
+            loopcond = 0;
+        if (n == 1)
+            loopcond = 0;
+        if (loopcond)
+            n = n - diff;
+    }
+    return n;
+}
+
+var f = fact(10);
+var o = isodd(f);
+
+if (o) {
+    print(123);
+} else {
+    print(234);
+}

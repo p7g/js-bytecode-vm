@@ -7,7 +7,7 @@ function assert(cond, msg) {
 }
 
 function num2bytes(n) {
-  return [n & 0xff00, n & 0xff];
+  return [(n & 0xff00) >> 8, n & 0xff];
 }
 
 module.exports = {

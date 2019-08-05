@@ -64,9 +64,10 @@ class Scope {
 }
 
 class Context {
-  constructor(bc, scope) {
+  constructor(bc, scope, fn = null) {
     this.bc = bc;
     this.scope = scope;
+    this.fn = fn;
   }
 
   withScope(scope) {
@@ -75,6 +76,10 @@ class Context {
 
   withNewScope() {
     return this.withScope(new Scope(this.scope));
+  }
+
+  with({ bc, scope, fn }) {
+    return new Context(bc || this.bc, scope || this.scope, fn || this.fn);
   }
 
   write(instructions) {
@@ -167,7 +172,7 @@ class IntegerLiteral {
         opcodes = [OpCodes.OP_CONST1];
         break;
       default:
-        opcodes = [OpCodes.OP_CONST, this.value & 0xff00, this.value & 0xff];
+        opcodes = [OpCodes.OP_CONST, ...num2bytes(this.value)];
         break;
     }
 
@@ -265,7 +270,7 @@ class UnaryExpression {
 }
 
 class IfStatement {
-  constructor(pred, then, otherwise) {
+  constructor(pred, then, otherwise = null) {
     this.pred = pred;
     this.then = then;
     this.otherwise = otherwise;
@@ -282,7 +287,7 @@ class IfStatement {
     ctx.bc.write(OpCodes.OP_JMP);
     end.address();
     otherwise.label();
-    if (this.otherwise) {
+    if (this.otherwise !== null) {
       this.otherwise.compile(ctx);
     }
     end.label();
@@ -368,7 +373,10 @@ class FunctionDeclaration {
   compile(ctx) {
     const functionLabel = ctx.bc.newLabel();
     ctx.scope.declareFunction(this.name, functionLabel);
-    const innerCtx = ctx.withNewScope();
+    const innerCtx = ctx.with({
+      scope: new Scope(ctx.scope),
+      fn: { arity: this.params.length },
+    });
     const innerScope = innerCtx.scope;
     const skip = ctx.bc.newLabel();
 
@@ -485,7 +493,7 @@ class ReturnStatement {
 
   compile(ctx) {
     this.value.compile(ctx);
-    ctx.bc.write(OpCodes.OP_RET);
+    ctx.write([OpCodes.OP_RET, ...num2bytes(ctx.fn.arity)]);
   }
 }
 

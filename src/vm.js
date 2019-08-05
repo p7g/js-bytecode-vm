@@ -269,9 +269,13 @@ function evaluate(environment, instructions) {
       }
 
       case OpCodes.OP_RET: {
+        const numArgs = read16();
         const retval = pop();
         endScope();
         ip = pop();
+        for (let i = 0; i < numArgs; i += 1) {
+          pop(); // clean up arguments
+        }
         push(retval);
         break;
       }

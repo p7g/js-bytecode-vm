@@ -94,8 +94,8 @@ variableDeclaration -> %var_ identifier ( %oneequal expression ):? %semicolon {%
 %}
 
 ifStatement -> %if_ %lparen expression %rparen statement ( %else_ statement ):? {%
-    function([, , pred, , then, , else_]) {
-        if (else_ instanceof Array) {
+    function([, , pred, , then, else_]) {
+        if (else_ !== null) {
             [, else_] = else_;
         }
         return new AST.IfStatement(pred, then, else_);
