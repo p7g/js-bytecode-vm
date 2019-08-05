@@ -163,7 +163,7 @@ additionExpression -> additionExpression ( %plus | %minus ) multiplicationExpres
 multiplicationExpression -> multiplicationExpression ( %times | %divide ) unaryExpression {% binop %}
                           | unaryExpression {% id %}
 
-unaryExpression -> ( %exclaim | %tilde ) unaryExpression {% ([op, exp]) => new AST.UnaryExpression(op.value, exp) %}
+unaryExpression -> ( %exclaim | %tilde | %minus ) unaryExpression {% ([[op], exp]) => new AST.UnaryExpression(op.value, exp) %}
                  | primaryExpression {% id %}
 
 primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}

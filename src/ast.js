@@ -260,7 +260,7 @@ class UnaryExpression {
     }
 
     this.expr.compile(ctx);
-    this.bc.write(op);
+    ctx.bc.write(op);
   }
 }
 
@@ -282,7 +282,9 @@ class IfStatement {
     ctx.bc.write(OpCodes.OP_JMP);
     end.address();
     otherwise.label();
-    this.otherwise.compile(ctx);
+    if (this.otherwise) {
+      this.otherwise.compile(ctx);
+    }
     end.label();
   }
 }
