@@ -12,6 +12,21 @@ the VM can be made to work very differently.
 1. Write a cool script in a file (good luck figuring out how the language works)
 1. Run it `npm run start -- mycoolscript.jsbcvm`
 
+Here's a snippet of the language:
+
+```js
+function fact(n) {
+    var acc = 1;
+    while (n > 1) {
+        acc = acc * n;
+        n = n - 1;
+    }
+    return acc;
+}
+
+print(fact(10));
+```
+
 ## Next steps
 
 - objects
