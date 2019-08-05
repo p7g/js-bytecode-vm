@@ -484,6 +484,7 @@ module.exports = {
   FunctionDeclaration,
   IdentifierExpression,
   IfStatement,
+  IntegerLiteral,
   ReturnStatement,
   UnaryExpression,
   VariableDeclaration,

@@ -1,79 +1,191 @@
-start -> (_ declaration _):+
+@{%
+const moo = require('moo');
+const AST = require('../src/ast.js');
 
-declaration -> functionDeclaration
-             | variableDeclaration
+function binop([left, op, right]) {
+    if (op instanceof Array) {
+        [op] = op;
+    }
+    return new AST.BinaryExpression(left, op.value, right);
+}
 
-statement -> expressionStatement
-		   | ifStatement
-           | whileStatement
-           | block
-           | returnStatement
-           | declaration
+const lexer = moo.compile({
+    ws: /[\t \r]+/,
+    newline: { match: /\n/, lineBreaks: true },
+    comment: /\/\/.*?$/,
+    lparen: '(',
+    rparen: ')',
+    lbrace: '{',
+    rbrace: '}',
+    plus: '+',
+    minus: '-',
+    times: '*',
+    divide: '/',
+    andand: '&&',
+    oror: '||',
+    and: '&',
+    or: '|',
+    caret: '^',
+    exclaim: '!',
+    tiled: '~',
+    less: '<',
+    more: '>',
+    equal: '==',
+    oneequal: '=',
+    notequal: '!=',
+    semicolon: ';',
+    comma: ',',
+    identifier: {
+        match: /[_a-zA-Z]\w*/,
+        type: moo.keywords({
+            let_: 'let',
+            if_: 'if',
+            else_: 'else',
+            while_: 'while',
+            return_: 'return',
+        }),
+    },
+    integer: /0|[1-9][0-9]*/,
+});
 
-functionDeclaration -> identifier _ "(" _ parameterList _ ")" _ block
+lexer.next = (next => () => {
+    let tok;
+    while ((tok = next.call(lexer))) {
+        if (tok.type === 'comment'
+                || tok.type === 'ws'
+                || tok.type === 'newline') {
+            continue;
+        }
+        break;
+    }
+    return tok;
+})(lexer.next);
+%}
 
-variableDeclaration -> "let" __ identifier _ ( "=" _ expression _ ):? ";"
+@lexer lexer
 
-ifStatement -> "if" _ "(" _ expression _ ")" _ statement ( _ "else" _ statement ):?
+start -> statement:+ {% id %}
 
-whileStatement -> "while" _ "(" _ expression _ ")" _ statement
+declaration -> functionDeclaration {% id %}
+             | variableDeclaration {% id %}
 
-returnStatement -> "return" _ expression _ ";"
+statement -> expressionStatement {% id %}
+           | ifStatement {% id %}
+           | whileStatement {% id %}
+           | block {% id %}
+           | returnStatement {% id %}
+           | declaration {% id %}
 
-expressionStatement -> expression _ ";"
+functionDeclaration -> identifier %lparen parameterList %rparen block {%
+    function([name, , params, , body]) {
+        return new AST.FunctionDeclaration(name, params, body.statements);
+    }
+%}
 
-parameterList -> ( identifier _ ( "," _ identifier _ ):* ",":? ):?
+variableDeclaration -> %let_ identifier ( %oneequal expression ):? %semicolon {%
+    function([, name, maybeExp]) {
+        let exp = null;
+        if (maybeExp !== null) {
+            [, exp] = maybeExp;
+        }
+        return new AST.VariableDeclaration(name, exp);
+    }
+%}
 
-block -> "{" _ ( statement _ ):* "}"
+ifStatement -> %if_ %lparen expression %rparen statement ( %else_ statement ):? {%
+    function([, , pred, , then, , else_]) {
+        if (else_ instanceof Array) {
+            [, else_] = else_;
+        }
+        return new AST.IfStatement(pred, then, else_);
+    }
+%}
 
-expression -> assignmentExpression
+whileStatement -> %while_ %lparen expression %rparen statement {% ([, , pred, , stmt]) => new AST.WhileStatement(pred, stmt) %}
 
-assignmentExpression -> identifier _ "=" _ assignmentExpression
-                      | orExpression
+returnStatement -> %return_ expression %semicolon {% ([_, exp]) => new AST.ReturnStatement(exp) %}
 
-orExpression -> orExpression _ "||" _ andExpression
-              | andExpression
+expressionStatement -> expression %semicolon {% ([exp]) => new AST.ExpressionStatement(exp) %}
 
-andExpression -> andExpression _ "&&" _ bitwiseOrExpression
-               | bitwiseOrExpression
+parameterList -> ( identifier ( %comma identifier ):* %comma:? ):? {%
+    function([maybeIdent]) {
+        if (!maybeIdent) {
+            return [];
+        }
+        const [ident, idents] = maybeIdent;
+        const all = [ident];
+        if (idents) {
+            return all.concat(idents.filter(([_, is]) => is).map(([_, [i]]) => i));
+        }
+        return all;
+    }
+%}
 
-bitwiseOrExpression -> bitwiseOrExpression _ "|" _ bitwiseXorExpression
-                     | bitwiseXorExpression
+block -> %lbrace ( statement ):* %rbrace {%
+    function([_, stmts]) {
+        if (!(stmts instanceof Array)) {
+            stmts = [];
+        }
+        return new AST.Block(stmts.map(id));
+    }
+%}
 
-bitwiseXorExpression -> bitwiseXorExpression _ "^" _ bitwiseAndExpression
-                      | bitwiseAndExpression
+expression -> assignmentExpression {% id %}
 
-bitwiseAndExpression -> bitwiseAndExpression _ "&" _ equalityExpression
-                      | equalityExpression
+assignmentExpression -> identifier %oneequal assignmentExpression {% ([target, _, exp]) => new AST.AssignmentExpression(target, exp) %}
+                      | orExpression {% id %}
 
-equalityExpression -> equalityExpression _ ( "==" | "!=" ) _ comparisonExpression
-                    | comparisonExpression
+orExpression -> orExpression %oror andExpression {% binop %}
+              | andExpression {% id %}
 
-comparisonExpression -> comparisonExpression _ [><] _ additionExpression
-                      | additionExpression
+andExpression -> andExpression %andand bitwiseOrExpression {% binop %}
+               | bitwiseOrExpression {% id %}
 
-additionExpression -> additionExpression _ [+-] _ multiplicationExpression
-                    | multiplicationExpression
+bitwiseOrExpression -> bitwiseOrExpression %or bitwiseXorExpression {% binop %}
+                     | bitwiseXorExpression {% id %}
 
-multiplicationExpression -> multiplicationExpression _ [*/] _ unaryExpression
-                          | unaryExpression
+bitwiseXorExpression -> bitwiseXorExpression %caret bitwiseAndExpression {% binop %}
+                      | bitwiseAndExpression {% id %}
 
-unaryExpression -> [!~] _ unaryExpression
-                 | primaryExpression
+bitwiseAndExpression -> bitwiseAndExpression %and equalityExpression {% binop %}
+                      | equalityExpression {% id %}
 
-primaryExpression -> integerLiteral
-                   | callExpression
-                   | identifier
-                   | "(" _ expression _ ")"
+equalityExpression -> equalityExpression ( %equal | %notequal ) comparisonExpression {% binop %}
+                    | comparisonExpression {% id %}
 
-callExpression -> identifier _ "(" _ argumentList _ ")"
+comparisonExpression -> comparisonExpression ( %less | %more ) additionExpression {% binop %}
+                      | additionExpression {% id %}
 
-argumentList -> ( expression _ ( "," _ expression _ ):* ",":? ):?
+additionExpression -> additionExpression ( %plus | %minus ) multiplicationExpression {% binop %}
+                    | multiplicationExpression {% id %}
 
-integerLiteral -> [1-9] [0-9]:* | "0"
+multiplicationExpression -> multiplicationExpression ( %times | %divide ) unaryExpression {% binop %}
+                          | unaryExpression {% id %}
 
-identifier -> [_a-zA-Z] [_a-zA-Z0-9]:*
+unaryExpression -> ( %exclaim | %tilde ) unaryExpression {% ([op, exp]) => new AST.UnaryExpression(op.value, exp) %}
+                 | primaryExpression {% id %}
 
-_ -> __:?
+primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}
+                   | callExpression {% id %}
+                   | identifier {% ([ident]) => new AST.IdentifierExpression(ident) %}
+                   | %lparen expression %rparen {% (([, expr, _]) => expr) %}
 
-__ -> [\n\t ]:+
+callExpression -> identifier %lparen argumentList %rparen {% ([ident, _, args]) => new AST.CallExpression(ident, args) %}
+
+argumentList -> ( expression ( %comma expression ):* %comma:? ):? {%
+    function([maybeExp]) {
+        if (!maybeExp) {
+            return [];
+        }
+        const [expr, exprs] = maybeExp;
+        const all = [expr];
+        if (exprs) {
+            return all.concat(exprs.map(([_, exp]) => exp));
+        }
+        return all;
+    }
+%}
+
+identifier -> %identifier {% ([ident]) => ident.value %}
+
+integerLiteral -> %integer {% ([n]) => Number.parseInt(n, 10) %}
