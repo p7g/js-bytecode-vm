@@ -102,11 +102,23 @@ ifStatement -> %if_ %lparen expression %rparen statement ( %else_ statement ):? 
     }
 %}
 
-whileStatement -> %while_ %lparen expression %rparen statement {% ([, , pred, , stmt]) => new AST.WhileStatement(pred, stmt) %}
+whileStatement -> %while_ %lparen expression %rparen statement {%
+    function([, , pred, , stmt]) {
+        return new AST.WhileStatement(pred, stmt);
+    }
+%}
 
-returnStatement -> %return_ expression %semicolon {% ([_, exp]) => new AST.ReturnStatement(exp) %}
+returnStatement -> %return_ expression %semicolon {%
+    function([_, exp]) {
+        return new AST.ReturnStatement(exp);
+    }
+%}
 
-expressionStatement -> expression %semicolon {% ([exp]) => new AST.ExpressionStatement(exp) %}
+expressionStatement -> expression %semicolon {%
+    function([exp]) {
+        return new AST.ExpressionStatement(exp);
+    }
+%}
 
 parameterList -> ( identifier ( %comma identifier ):* %comma:? ):? {%
     function([maybeIdent]) {
@@ -133,7 +145,11 @@ block -> %lbrace ( statement ):* %rbrace {%
 
 expression -> assignmentExpression {% id %}
 
-assignmentExpression -> identifier %oneequal assignmentExpression {% ([target, _, exp]) => new AST.AssignmentExpression(target, exp) %}
+assignmentExpression -> identifier %oneequal assignmentExpression {%
+    function([target, _, exp]) {
+        return new AST.AssignmentExpression(target, exp);
+    }
+%}
                       | orExpression {% id %}
 
 orExpression -> orExpression %oror andExpression {% binop %}
@@ -163,7 +179,11 @@ additionExpression -> additionExpression ( %plus | %minus ) multiplicationExpres
 multiplicationExpression -> multiplicationExpression ( %times | %divide ) unaryExpression {% binop %}
                           | unaryExpression {% id %}
 
-unaryExpression -> ( %exclaim | %tilde | %minus ) unaryExpression {% ([[op], exp]) => new AST.UnaryExpression(op.value, exp) %}
+unaryExpression -> ( %exclaim | %tilde | %minus ) unaryExpression {%
+    function([[op], exp]) {
+        return new AST.UnaryExpression(op.value, exp);
+    }
+%}
                  | primaryExpression {% id %}
 
 primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}
@@ -171,7 +191,11 @@ primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}
                    | identifier {% ([ident]) => new AST.IdentifierExpression(ident) %}
                    | %lparen expression %rparen {% (([, expr, _]) => expr) %}
 
-callExpression -> identifier %lparen argumentList %rparen {% ([ident, _, args]) => new AST.CallExpression(ident, args) %}
+callExpression -> identifier %lparen argumentList %rparen {%
+    function([ident, _, args]) {
+        new AST.CallExpression(ident, args);
+    }
+%}
 
 argumentList -> ( expression ( %comma expression ):* %comma:? ):? {%
     function([maybeExp]) {
