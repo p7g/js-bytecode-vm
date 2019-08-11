@@ -1,7 +1,42 @@
 const OpCodes = require('./opcode');
+const { ValueType } = require('./value');
 
 const instructionNames = [];
 Object.entries(OpCodes).forEach(([k, v]) => { instructionNames[v] = k; });
+
+function printStack(stack) {
+  let buf = '[';
+  for (let i = 0; i < stack.length; i += 1) {
+    if (i !== 0) {
+      buf += ', ';
+    }
+
+    const item = stack[i];
+    if (typeof item === 'object') {
+      const { type, value } = item;
+
+      switch (type) {
+        case ValueType.FUNCTION:
+          buf += `fn@${value}`;
+          break;
+
+        case ValueType.BUILTIN_FUNCTION:
+          buf += `fn ${value.name}`;
+          break;
+
+        default:
+          buf += value;
+          break;
+      }
+    } else {
+      buf += `&${item}`;
+    }
+  }
+
+  buf += ']';
+
+  return buf;
+}
 
 function disassemble(bytecode_) {
   const bytecode = [...bytecode_];
@@ -85,11 +120,7 @@ function disassemble(bytecode_) {
         buf += ` ${read16()}`;
         break;
 
-      case OpCodes.OP_CALL:
-        buf += ` ${read16()}`;
-        break;
-
-      case OpCodes.OP_CALLNATIVE:
+      case OpCodes.OP_NEWFUNCTION:
         buf += ` ${read16()}`;
         break;
 
@@ -110,4 +141,5 @@ function disassemble(bytecode_) {
 module.exports = {
   disassemble,
   instructionNames,
+  printStack,
 };

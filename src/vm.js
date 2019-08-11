@@ -1,8 +1,10 @@
 const OpCodes = require('./opcode');
-const { instructionNames, disassemble } = require('./disassemble');
+const { instructionNames, disassemble, printStack } = require('./disassemble');
 const AST = require('./ast');
-
-const DEBUG = false;
+const value = require('./value');
+const { ValueType } = value;
+const { assert } = require('./utils');
+const { DEBUG } = require('./config');
 
 function log(...args) {
   if (DEBUG) {
@@ -18,6 +20,10 @@ function evaluate(environment, instructions) {
 
   const push = (n) => { stack[sp++] = n; };
   const pop = () => stack[--sp];
+
+  for (const value of environment) {
+    push(value);
+  }
 
   function read() {
     return instructions[ip++];
@@ -67,12 +73,9 @@ function evaluate(environment, instructions) {
   for (;;) {
     op = read();
 
-    if (op === undefined) {
-      op = OpCodes.OP_HALT;
-    }
-
-    log(`\n${JSON.stringify(stack.slice(0, sp))}\n`);
-    log(`ip:${ip} sp:${sp} bp:${bp} ${instructionNames[op]}`);
+    log('---');
+    log(printStack(stack.slice(0, sp)));
+    log(`\nip:${ip - 1} sp:${sp} bp:${bp} ${instructionNames[op]}`);
     switch (op) {
       case OpCodes.OP_HALT:
         return pop();
@@ -82,15 +85,23 @@ function evaluate(environment, instructions) {
         break;
 
       case OpCodes.OP_CONST:
-        push(read16());
+        push(value.makeInteger(read16()));
         break;
 
       case OpCodes.OP_CONST0:
-        push(0);
+        push(value.makeInteger(0));
         break;
 
       case OpCodes.OP_CONST1:
-        push(1);
+        push(value.makeInteger(1));
+        break;
+
+      case OpCodes.OP_CONSTTRUE:
+        push(value.makeBoolean(true));
+        break;
+
+      case OpCodes.OP_CONSTFALSE:
+        push(value.makeBoolean(false));
         break;
 
       case OpCodes.OP_LOAD:
@@ -144,81 +155,81 @@ function evaluate(environment, instructions) {
       case OpCodes.OP_ADD: {
         const rhs = pop();
         const lhs = pop();
-        push(lhs + rhs);
+        push(value.add(lhs, rhs));
         break;
       }
 
       case OpCodes.OP_ADD1:
-        stack[topOffset()] += 1;
+        stack[topOffset()] = value.add1(stack[topOffset()]);
         break;
 
       case OpCodes.OP_SUB: {
         const rhs = pop();
         const lhs = pop();
-        push(lhs - rhs);
+        push(value.sub(lhs, rhs));
         break;
       }
 
       case OpCodes.OP_SUB1:
-        stack[topOffset()] -= 1;
+        stack[topOffset()] = value.sub1(stack[topOffset()]);
         break;
 
       case OpCodes.OP_MUL: {
         const rhs = pop();
         const lhs = pop();
-        push(lhs * rhs);
+        push(value.mul(lhs, rhs));
         break;
       }
 
       case OpCodes.OP_DIV: {
         const rhs = pop();
         const lhs = pop();
-        push(Math.floor(lhs / rhs));
+        push(value.div(lhs, rhs));
         break;
       }
 
       case OpCodes.OP_NEG:
-        stack[topOffset()] *= -1;
+        stack[topOffset()] = value.neg(stack[topOffset()]);
         break;
 
       case OpCodes.OP_AND: {
         const rhs = pop();
         const lhs = pop();
-        push(lhs & rhs);
+        push(value.and(lhs, rhs));
         break;
       }
 
       case OpCodes.OP_OR: {
         const rhs = pop();
         const lhs = pop();
-        push(lhs | rhs);
+        push(value.or(lhs, rhs));
         break;
       }
 
       case OpCodes.OP_NOT: {
-        push(~pop());
+        push(value.not(pop()));
         break;
       }
 
       case OpCodes.OP_EQ:
-        push(+(pop() === pop()));
+        push(value.eq(pop(), pop()));
         break;
 
       case OpCodes.OP_NE:
-        push(+(pop() !== pop()));
+        push(value.ne(pop(), pop()));
         break;
 
       case OpCodes.OP_LT: {
         const rhs = pop();
         const lhs = pop();
-        push(+(lhs < rhs));
+        push(value.lt(lhs, rhs));
         break;
       }
 
       case OpCodes.OP_GT: {
         const rhs = pop();
         const lhs = pop();
-        push(+(lhs > rhs));
+        push(value.gt(lhs, rhs));
         break;
       }
 
@@ -228,14 +239,14 @@ function evaluate(environment, instructions) {
 
       case OpCodes.OP_TJMP: {
         const offset = read16();
-        if (pop() !== 0) {
+        if (value.isTruthy(pop())) {
           ip = offset;
         } break;
       }
 
       case OpCodes.OP_FJMP: {
         const offset = read16();
-        if (pop() === 0) {
+        if (!value.isTruthy(pop())) {
           ip = offset;
         }
         break;
@@ -249,22 +260,30 @@ function evaluate(environment, instructions) {
         endScope();
         break;
 
-      case OpCodes.OP_CALL: {
-        const targetIp = read16();
-        push(ip);
-        ip = targetIp;
-        newScope();
+      case OpCodes.OP_NEWFUNCTION:
+        push(value.makeFunction(read16()));
         break;
-      }
 
-      case OpCodes.OP_CALLNATIVE: {
-        const index = read16();
-        const fn = environment.getBuiltin(index);
-        const args = [];
-        for (let i = 0; i < fn.length; i += 1) {
-          args.push(pop());
+      case OpCodes.OP_CALL: {
+        const fn = pop();
+        assert(
+          fn.type === ValueType.FUNCTION
+          || fn.type === ValueType.BUILTIN_FUNCTION,
+          `Value of type ${fn.type} is not callable`,
+        );
+
+        if (fn.type === ValueType.FUNCTION) {
+          push(ip);
+          ip = fn.value;
+          newScope();
+        } else if (fn.type === ValueType.BUILTIN_FUNCTION) {
+          const args = [];
+          for (let i = 0; i < fn.value.length; i += 1) {
+            args.push(pop());
+          }
+          push(fn.value(...args));
         }
-        push(fn(...args));
+
         break;
       }
 

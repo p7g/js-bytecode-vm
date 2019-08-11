@@ -44,6 +44,8 @@ const lexer = moo.compile({
             else_: 'else',
             while_: 'while',
             return_: 'return',
+            true_: 'true',
+            false_: 'false',
         }),
     },
     integer: /0|[1-9][0-9]*/,
@@ -187,13 +189,20 @@ unaryExpression -> ( %exclaim | %tilde | %minus ) unaryExpression {%
                  | primaryExpression {% id %}
 
 primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}
+                   | booleanExpression {% id %}
                    | callExpression {% id %}
                    | identifier {% ([ident]) => new AST.IdentifierExpression(ident) %}
                    | %lparen expression %rparen {% (([, expr, _]) => expr) %}
 
-callExpression -> identifier %lparen argumentList %rparen {%
-    function([ident, _, args]) {
-        new AST.CallExpression(ident, args);
+booleanExpression -> ( %true_ | %false_ ) {%
+    function([[kw]]) {
+        return new AST.BooleanExpression(kw === 'true');
+    }
+%}
+
+callExpression -> primaryExpression %lparen argumentList %rparen {%
+    function([expr, _, args]) {
+        return new AST.CallExpression(expr, args);
     }
 %}
 

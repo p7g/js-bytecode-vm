@@ -1,6 +1,6 @@
 function fact(n) {
     var acc = 1;
-    while (n > 0) {
+    while (n > 1) {
         acc = acc * n;
         n = n - 1;
     }
@@ -11,22 +11,28 @@ function isodd(n) {
     var diff = 2;
     if (n < 0)
         diff = -2;
-    var loopcond = 1;
+    var loopcond = true;
     while (loopcond) {
         if (n == 0)
-            loopcond = 0;
+            loopcond = false;
         else if (n == 1)
-            loopcond = 0;
+            loopcond = false;
         else
             n = n - diff;
     }
-    return n;
+    return n == 1;
 }
 
-var f = fact(5);
+function iseven(n) {
+    return isodd(n) == false;
+}
+
+var f = fact(3);
 
 if (isodd(f)) {
     print(123);
 } else {
     print(234);
 }
+
+print(iseven(f));

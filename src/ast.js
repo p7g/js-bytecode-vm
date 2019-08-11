@@ -7,11 +7,6 @@ class Scope {
     this.parent = parent;
     this.index = 0;
     this.paramIndex = 0;
-    this.values = {
-      variables: [],
-      params: [],
-      builtins: [],
-    };
   }
 
   get(name, num = 0) {
@@ -28,38 +23,14 @@ class Scope {
     if (this.bindings.has(name)) {
       throw new Error(`ReferenceError: redeclaring identifier ${name}`);
     }
-    const index = this.values.variables.push(name) - 1;
-    this.bindings.set(name, { type: 'variable', value: index });
+    this.bindings.set(name, { type: 'variable', value: this.index++ });
   }
 
   declareParameter(name) {
     if (this.bindings.has(name)) {
       throw new Error(`ReferenceError: redeclaring parameter ${name}`);
     }
-    const index = this.values.params.push(name) - 1;
-    this.bindings.set(name, { type: 'parameter', value: index });
-  }
-
-  declareFunction(name, label) {
-    if (this.bindings.has(name)) {
-      throw new Error(`ReferenceError: redeclaring function ${name}`);
-    }
-    this.bindings.set(name, { type: 'function', value: label });
-    return label;
-  }
-
-  declareBuiltin(name, fn) {
-    if (this.bindings.has(name)) {
-      throw new Error(`ReferenceError: redeclaring builtin ${name}`);
-    }
-    const index = this.values.builtins.push(fn) - 1;
-    this.bindings.set(name, { type: 'builtin', value: index });
-  }
-
-  getBuiltin(index) {
-    const builtin = this.values.builtins[index];
-    assert(builtin, 'Builtin should exist');
-    return builtin;
+    this.bindings.set(name, { type: 'parameter', value: this.paramIndex++ });
   }
 }
 
@@ -152,6 +123,8 @@ class Bytecode {
     for (const node of nodes) {
       node.compile(ctx);
     }
+
+    this.write(OpCodes.OP_HALT);
 
     return this.instructions;
   }
@@ -372,7 +345,10 @@ class FunctionDeclaration {
 
   compile(ctx) {
     const functionLabel = ctx.bc.newLabel();
-    ctx.scope.declareFunction(this.name, functionLabel);
+    ctx.scope.declareVariable(this.name);
+    ctx.bc.write(OpCodes.OP_NEWFUNCTION);
+    functionLabel.address();
+
     const innerCtx = ctx.with({
       scope: new Scope(ctx.scope),
       fn: { arity: this.params.length },
@@ -462,27 +438,32 @@ class ExpressionStatement {
   }
 }
 
+class BooleanExpression {
+  constructor(value) {
+    this.value = value;
+  }
+
+  compile(ctx) {
+    if (this.value) {
+      ctx.bc.write(OpCodes.OP_CONSTTRUE);
+    } else {
+      ctx.bc.write(OpCodes.OP_CONSTFALSE);
+    }
+  }
+}
+
 class CallExpression {
-  constructor(name, args) {
-    this.name = name;
+  constructor(expr, args) {
+    this.expr = expr;
     this.args = args;
   }
 
   compile(ctx) {
-    const { args } = this;
+    const { args, expr } = this;
     args.reverse();
-    const { type, value } = ctx.scope.get(this.name);
     args.forEach(a => a.compile(ctx));
-
-    if (type === 'function') {
-      ctx.bc.write(OpCodes.OP_CALL);
-      value.address();
-    } else if (type === 'builtin') {
-      ctx.bc.write(OpCodes.OP_CALLNATIVE);
-      ctx.write(num2bytes(value));
-    } else {
-      throw new Error(`TypeError: cannot call ${this.name} as a function`);
-    }
+    expr.compile(ctx);
+    ctx.bc.write(OpCodes.OP_CALL);
   }
 }
 
@@ -504,6 +485,7 @@ module.exports = {
   AssignmentExpression,
   BinaryExpression,
   Block,
+  BooleanExpression,
   CallExpression,
   ExpressionStatement,
   FunctionDeclaration,

@@ -1,16 +1,19 @@
 const { Scope } = require('./ast');
+const { makeBuiltinFunction } = require('./value');
 
 function intrinsicPrint(value) {
-  console.log(value); // eslint-disable-line no-console
+  console.log(value.value); // eslint-disable-line no-console
   return 0;
 }
 
 function getIntrinsics() {
   const scope = new Scope();
+  const environment = [];
 
-  scope.declareBuiltin('print', intrinsicPrint);
+  scope.declareVariable('print');
+  environment.push(makeBuiltinFunction(intrinsicPrint));
 
-  return scope;
+  return [scope, environment];
 }
 
 module.exports = {
