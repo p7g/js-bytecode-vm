@@ -27,9 +27,15 @@ function iseven(n) {
     return isodd(n) == false;
 }
 
+function printresult(fn, arg) {
+    var result = fn(arg);
+    print(result);
+    return result;
+}
+
 var f = fact(3);
 
-if (isodd(f)) {
+if (printresult(isodd, f)) {
     print(123);
 } else {
     print(234);
