@@ -1,52 +1,5 @@
-function fact(n) {
-    var acc = 1;
-    while (n > 1) {
-        acc = acc * n;
-        n = n - 1;
-    }
-    return acc;
+for (var i = 0; i < 10; i = i + 1) {
+    print(i);
 }
 
-function isodd(n) {
-    var diff = 2;
-    if (n < 0)
-        diff = -2;
-    var loopcond = true;
-    while (loopcond) {
-        if (n == 0)
-            loopcond = false;
-        else if (n == 1)
-            loopcond = false;
-        else
-            n = n - diff;
-    }
-    return n == 1;
-}
-
-function iseven(n) {
-    return isodd(n) == false;
-}
-
-function multiplier(a) {
-    function multiply(b) {
-        return a * b;
-    }
-    return multiply;
-}
-
-function printresult(fn, arg) {
-    var result = fn(arg);
-    print(result);
-    return result;
-}
-
-var f = fact(3);
-var timesf = multiplier(f);
-
-if (printresult(timesf, f) > 100) {
-    print(123);
-} else {
-    print(234);
-}
-
-print(iseven(f));
+print(100);

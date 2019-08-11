@@ -23,6 +23,10 @@ async function main() {
 
   const ast = parser.result;
 
+  if (DEBUG) {
+    console.dir(ast, { depth: 100 });
+  }
+
   const [initialScope, env] = getIntrinsics();
   const bytecode = new Bytecode(initialScope).compile(ast);
 

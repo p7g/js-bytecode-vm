@@ -41,10 +41,11 @@ class Scope {
 }
 
 class Context {
-  constructor(bc, scope, fn = null) {
+  constructor(bc, scope, fn = null, loop = null) {
     this.bc = bc;
     this.scope = scope;
     this.fn = fn;
+    this.loop = loop;
   }
 
   withScope(scope) {
@@ -55,8 +56,18 @@ class Context {
     return this.withScope(new Scope(this.scope));
   }
 
-  with({ bc, scope, fn }) {
-    return new Context(bc || this.bc, scope || this.scope, fn || this.fn);
+  with({
+    bc,
+    scope,
+    fn,
+    loop,
+  }) {
+    return new Context(
+      bc || this.bc,
+      scope || this.scope,
+      fn || this.fn,
+      loop || this.loop,
+    );
   }
 
   write(instructions) {
@@ -321,14 +332,83 @@ class WhileStatement {
     const top = ctx.bc.newLabel();
     const exit = ctx.bc.newLabel();
 
+    const innerCtx = ctx.with({
+      loop: {
+        continueTo: top,
+        breakTo: exit,
+      },
+    });
+
     top.label();
-    this.pred.compile(ctx);
+    this.pred.compile(innerCtx);
     ctx.bc.write(OpCodes.OP_FJMP);
     exit.address();
-    this.body.compile(ctx);
+    this.body.compile(innerCtx);
     ctx.bc.write(OpCodes.OP_JMP);
     top.address();
     exit.label();
+  }
+}
+
+class ContinueStatement {
+  compile(ctx) {
+    assert(ctx.loop !== null, 'Cannot continue outside of loop');
+
+    const { continueTo } = ctx.loop;
+
+    ctx.bc.write(OpCodes.OP_JMP);
+    continueTo.address();
+  }
+}
+
+class ForStatement {
+  constructor(init, test, incr, body) {
+    this.init = init;
+    this.test = test;
+    this.incr = incr;
+    this.body = body;
+  }
+
+  compile(ctx) {
+    const top = ctx.bc.newLabel();
+    const incr = ctx.bc.newLabel();
+    const exit = ctx.bc.newLabel();
+
+    const innerCtx = ctx.with({
+      loop: {
+        continueTo: incr,
+        breakTo: exit,
+      },
+    });
+
+    if (this.init !== null) {
+      this.init.compile(ctx);
+    }
+    top.label();
+    if (this.test !== null) {
+      this.test.compile(ctx);
+      ctx.bc.write(OpCodes.OP_FJMP);
+      exit.address();
+    }
+    this.body.compile(innerCtx);
+    incr.label();
+    if (this.incr !== null) {
+      this.incr.compile(ctx);
+    }
+    ctx.bc.write(OpCodes.OP_JMP);
+    top.address();
+    exit.label();
+  }
+}
+
+class BreakStatement {
+  compile(ctx) {
+    assert(ctx.loop !== null, 'Cannot break outside of loop');
+
+    const { breakTo } = ctx.loop;
+
+    ctx.bc.write(OpCodes.OP_JMP);
+    breakTo.address();
   }
 }
 
@@ -532,8 +612,11 @@ module.exports = {
   BinaryExpression,
   Block,
   BooleanExpression,
+  BreakStatement,
   CallExpression,
+  ContinueStatement,
   ExpressionStatement,
+  ForStatement,
   FunctionDeclaration,
   IdentifierExpression,
   IfStatement,

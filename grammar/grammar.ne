@@ -38,14 +38,17 @@ const lexer = moo.compile({
     identifier: {
         match: /[_a-zA-Z]\w*/,
         type: moo.keywords({
-            var_: 'var',
-            if_: 'if',
-            function_: 'function',
+            break_: 'break',
+            continue_: 'continue',
             else_: 'else',
-            while_: 'while',
+            false_: 'false',
+            for_: 'for',
+            function_: 'function',
+            if_: 'if',
             return_: 'return',
             true_: 'true',
-            false_: 'false',
+            var_: 'var',
+            while_: 'while',
         }),
     },
     integer: /0|[1-9][0-9]*/,
@@ -75,9 +78,12 @@ declaration -> functionDeclaration {% id %}
 statement -> expressionStatement {% id %}
            | ifStatement {% id %}
            | whileStatement {% id %}
+           | forStatement {% id %}
            | block {% id %}
            | returnStatement {% id %}
            | declaration {% id %}
+           | breakStatement {% id %}
+           | continueStatement {% id %}
 
 functionDeclaration -> %function_ identifier %lparen parameterList %rparen block {%
     function([, name, , params, , body]) {
@@ -110,6 +116,17 @@ whileStatement -> %while_ %lparen expression %rparen statement {%
     }
 %}
 
+forStatement -> %for_ %lparen ( statement | %semicolon ) expression:? %semicolon expression:? %rparen statement {%
+    function([, , maybeInit, test, , incr, , body]) {
+        let init = null;
+        if (maybeInit !== null && maybeInit[0].type !== 'semicolon') {
+            init = maybeInit[0];
+        }
+
+        return new AST.ForStatement(init, test, incr, body);
+    }
+%}
+
 returnStatement -> %return_ expression %semicolon {%
     function([_, exp]) {
         return new AST.ReturnStatement(exp);
@@ -121,6 +138,10 @@ expressionStatement -> expression %semicolon {%
         return new AST.ExpressionStatement(exp);
     }
 %}
+
+breakStatement -> %break_ %semicolon {% () => new AST.BreakStatement() %}
+
+continueStatement -> %continue_ %semicolon {% () => new AST.ContinueStatement() %}
 
 parameterList -> ( identifier ( %comma identifier ):* %comma:? ):? {%
     function([maybeIdent]) {
