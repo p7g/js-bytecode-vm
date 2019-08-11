@@ -15,22 +15,20 @@ the VM can be made to work very differently.
 Here's a snippet of the language:
 
 ```js
-function fact(n) {
-    var acc = 1;
-    while (n > 1) {
-        acc = acc * n;
-        n = n - 1;
-    }
-    return acc;
+function multiplier(a) {
+  function multiply(b) {
+    return a * b;
+  }
+  return multiply;
 }
 
-print(fact(10));
+var times2 = multiplier(2);
+
+print(times2(4));
 ```
 
 ## Next steps
 
-- objects
-  - also other datatypes
-- closures
-- builtin function cleanup
+- other datatypes (object, array, string, etc)
 - error handling
+- modules
