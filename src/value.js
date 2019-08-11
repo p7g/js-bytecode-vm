@@ -76,19 +76,23 @@ const intOperations = [
 ];
 
 for (const [name, op, ret] of intOperations) {
-  module.exports[`${name}`] = function(a, b) {
+  module.exports[`${name}`] = (a, b) => {
     if (op.length === 2) {
       assert(a.type === b.type && a.type === ValueType.INTEGER,
         `can only ${name} ints, got ${a.type} and ${b.type}`);
       return (ret || makeInteger)(op(a.value, b.value));
-    } else if (op.length === 1) {
+    }
+    if (op.length === 1) {
       assert(a.type === ValueType.INTEGER, `can only ${name} an int`);
       return (ret || makeInteger)(op(a.value));
     }
+    throw new Error(
+      `Expected op function to have 1 or 2 args, got ${op.length}`,
+    );
   };
 
   if (op.length === 2) {
-    module.exports[`${name}1`] = function(a) {
+    module.exports[`${name}1`] = (a) => {
       assert(a.type === ValueType.INTEGER, `can only ${name} 1 to an int`);
       return (ret || makeInteger)(op(a.value, 1));
     };

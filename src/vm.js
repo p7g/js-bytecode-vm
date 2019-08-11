@@ -1,10 +1,10 @@
 const OpCodes = require('./opcode');
-const { instructionNames, disassemble, printStack } = require('./disassemble');
-const AST = require('./ast');
+const { instructionNames, printStack } = require('./disassemble');
 const value = require('./value');
-const { ValueType } = value;
 const { assert } = require('./utils');
 const { DEBUG } = require('./config');
+
+const { ValueType } = value;
 
 function log(...args) {
   if (DEBUG) {
@@ -21,8 +21,8 @@ function evaluate(environment, instructions) {
   const push = (n) => { stack[sp++] = n; };
   const pop = () => stack[--sp];
 
-  for (const value of environment) {
-    push(value);
+  for (const v of environment) {
+    push(v);
   }
 
   function read() {
@@ -30,9 +30,9 @@ function evaluate(environment, instructions) {
   }
 
   function read16() {
-    const value = (read() << 8) + read();
-    log(`	arg: ${value}`);
-    return value;
+    const v = (read() << 8) + read();
+    log(`	arg: ${v}`);
+    return v;
   }
 
   function newScope() {
@@ -56,15 +56,15 @@ function evaluate(environment, instructions) {
 
   // minus 3 to account for stored bp and ip
   function argOffset(n, scopeNum) {
-    const value = findBase(scopeNum) - 3 - n;
-    log(`	argOffset:${value}`);
-    return value;
+    const v = findBase(scopeNum) - 3 - n;
+    log(`	argOffset:${v}`);
+    return v;
   }
 
   function localOffset(n, scopeNum) {
-    const value = findBase(scopeNum) + n;
-    log(`	localOffset:${value}`);
-    return value;
+    const v = findBase(scopeNum) + n;
+    log(`	localOffset:${v}`);
+    return v;
   }
 
   const topOffset = () => sp - 1;
