@@ -130,7 +130,7 @@ parameterList -> ( identifier ( %comma identifier ):* %comma:? ):? {%
         const [ident, idents] = maybeIdent;
         const all = [ident];
         if (idents) {
-            return all.concat(idents.filter(([_, is]) => is).map(([_, [i]]) => i));
+            return all.concat(idents.filter(([_, is]) => is).map(([_, i]) => i));
         }
         return all;
     }
