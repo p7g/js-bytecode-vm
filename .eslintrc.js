@@ -24,5 +24,6 @@ module.exports = {
     "no-param-reassign": 0,
     "no-self-compare": 0,
     "no-unused-vars": 1,
+    "no-use-before-define": 0,
   },
 };

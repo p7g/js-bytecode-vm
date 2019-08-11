@@ -56,7 +56,7 @@ function evaluate(environment, instructions) {
 
   // minus 3 to account for stored bp and ip
   function argOffset(n, scopeNum) {
-    const v = findBase(scopeNum) - 3 - n;
+    const v = findBase(scopeNum) - 4 - n;
     log(`	argOffset:${v}`);
     return v;
   }
@@ -64,6 +64,12 @@ function evaluate(environment, instructions) {
   function localOffset(n, scopeNum) {
     const v = findBase(scopeNum) + n;
     log(`	localOffset:${v}`);
+    return v;
+  }
+
+  function functionOffset(scopeNum) {
+    const v = findBase(scopeNum) - 2;
+    log(`	functionOffset:${v}`);
     return v;
   }
 
@@ -274,7 +280,8 @@ function evaluate(environment, instructions) {
 
         if (fn.type === ValueType.FUNCTION) {
           push(ip);
-          ip = fn.value;
+          push(fn);
+          ip = fn.value.address;
           newScope();
         } else if (fn.type === ValueType.BUILTIN_FUNCTION) {
           const args = [];
@@ -287,10 +294,29 @@ function evaluate(environment, instructions) {
         break;
       }
 
+      case OpCodes.OP_ENCFUNCTION:
+        push(stack[functionOffset(read16())]);
+        break;
+
+      case OpCodes.OP_BINDVAR: {
+        const val = pop();
+        const fn = stack[topOffset()];
+        fn.value.bindings.push(val);
+        break;
+      }
+
+      case OpCodes.OP_LOADBOUND: {
+        const index = read16();
+        const fn = pop();
+        push(fn.value.bindings[index]);
+        break;
+      }
+
       case OpCodes.OP_RET: {
         const numArgs = read16();
         const retval = pop();
         endScope();
+        pop(); // enclosing function reference
         ip = pop();
         for (let i = 0; i < numArgs; i += 1) {
           pop(); // clean up arguments
@@ -300,7 +326,7 @@ function evaluate(environment, instructions) {
       }
 
       default:
-        throw new Error(`Unknown opcode ${op}`);
+        throw new Error(`Unknown opcode ${op} (${instructionNames[op]})`);
     }
   }
 }

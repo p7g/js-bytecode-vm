@@ -47,6 +47,8 @@ module.exports = {
   OP_ENDSCOPE: inst(),
   OP_NEWFUNCTION: inst(),
   OP_CALL: inst(),
-  OP_CALLNATIVE: inst(),
+  OP_ENCFUNCTION: inst(),
+  OP_BINDVAR: inst(),
+  OP_LOADBOUND: inst(),
   OP_RET: inst(),
 };

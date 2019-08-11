@@ -17,7 +17,7 @@ function printStack(stack) {
 
       switch (type) {
         case ValueType.FUNCTION:
-          buf += `fn@${value}`;
+          buf += `fn@${value.address}`;
           break;
 
         case ValueType.BUILTIN_FUNCTION:
@@ -121,6 +121,14 @@ function disassemble(bytecode_) {
         break;
 
       case OpCodes.OP_NEWFUNCTION:
+        buf += ` ${read16()}`;
+        break;
+
+      case OpCodes.OP_LOADBOUND:
+        buf += ` ${read16()}`;
+        break;
+
+      case OpCodes.OP_ENCFUNCTION:
         buf += ` ${read16()}`;
         break;
 

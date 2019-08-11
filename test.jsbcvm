@@ -27,6 +27,13 @@ function iseven(n) {
     return isodd(n) == false;
 }
 
+function multiplier(a) {
+    function multiply(b) {
+        return a * b;
+    }
+    return multiply;
+}
+
 function printresult(fn, arg) {
     var result = fn(arg);
     print(result);
@@ -34,8 +41,9 @@ function printresult(fn, arg) {
 }
 
 var f = fact(3);
+var timesf = multiplier(f);
 
-if (printresult(isodd, f)) {
+if (printresult(timesf, f) > 100) {
     print(123);
 } else {
     print(234);

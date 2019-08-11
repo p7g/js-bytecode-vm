@@ -21,7 +21,7 @@ function makeBuiltinFunction(fn) {
 }
 
 function makeFunction(address) {
-  return value(ValueType.FUNCTION, address);
+  return value(ValueType.FUNCTION, { address, bindings: [] });
 }
 
 function makeInteger(v) {

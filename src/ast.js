@@ -7,6 +7,7 @@ class Scope {
     this.parent = parent;
     this.index = 0;
     this.paramIndex = 0;
+    this.boundIndex = 0;
   }
 
   get(name, num = 0) {
@@ -19,18 +20,23 @@ class Scope {
     return this.parent.get(name, num + 1);
   }
 
-  declareVariable(name) {
+  declare(type, name, index) {
     if (this.bindings.has(name)) {
       throw new Error(`ReferenceError: redeclaring identifier ${name}`);
     }
-    this.bindings.set(name, { type: 'variable', value: this.index++ });
+    this.bindings.set(name, { type, value: index });
+  }
+
+  declareVariable(name) {
+    this.declare('variable', name, this.index++);
   }
 
   declareParameter(name) {
-    if (this.bindings.has(name)) {
-      throw new Error(`ReferenceError: redeclaring parameter ${name}`);
-    }
-    this.bindings.set(name, { type: 'parameter', value: this.paramIndex++ });
+    this.declare('parameter', name, this.paramIndex++);
+  }
+
+  declareBoundVariable(name) {
+    this.declare('bound', name, this.boundIndex++);
   }
 }
 
@@ -63,16 +69,16 @@ class Context {
 class Label {
   constructor(bc) {
     this.bc = bc;
-    this.label_location = null;
-    this.address_locations = [];
+    this.labelLocation = null;
+    this.addressLocations = [];
   }
 
   address() {
     let location;
-    if (this.label_location !== null) {
-      location = this.label_location;
+    if (this.labelLocation !== null) {
+      location = this.labelLocation;
     } else {
-      this.address_locations.push(this.bc.position);
+      this.addressLocations.push(this.bc.position);
       location = 0;
     }
     this.bc.write(location & 0xff00);
@@ -80,10 +86,11 @@ class Label {
   }
 
   label() {
-    this.label_location = this.bc.position;
-    for (const addr of this.address_locations) {
-      this.bc.update(addr, this.label_location & 0xff00);
-      this.bc.update(addr + 1, this.label_location & 0xff);
+    this.labelLocation = this.bc.position;
+    for (const addr of this.addressLocations) {
+      const [ba, bb] = num2bytes(this.labelLocation);
+      this.bc.update(addr, ba);
+      this.bc.update(addr + 1, bb);
     }
   }
 }
@@ -351,7 +358,10 @@ class FunctionDeclaration {
 
     const innerCtx = ctx.with({
       scope: new Scope(ctx.scope),
-      fn: { arity: this.params.length },
+      fn: {
+        arity: this.params.length,
+        bindings: [],
+      },
     });
     const innerScope = innerCtx.scope;
     const skip = ctx.bc.newLabel();
@@ -366,7 +376,18 @@ class FunctionDeclaration {
     for (const statement of this.body) {
       statement.compile(innerCtx);
     }
+
     skip.label();
+
+    for (const variable of innerCtx.fn.bindings) {
+      IdentifierExpression.compileAccess(ctx, {
+        ...variable,
+        scopeNum: variable.scopeNum - 1,
+      });
+      ctx.write([
+        OpCodes.OP_BINDVAR,
+      ]);
+    }
   }
 }
 
@@ -392,38 +413,63 @@ class IdentifierExpression {
   }
 
   compile(ctx) {
-    const { type, value, scopeNum } = ctx.scope.get(this.name);
+    const variable = ctx.scope.get(this.name);
 
-    let ops;
+    if (ctx.fn !== null && variable.scopeNum > 0) {
+      ctx.scope.declareBoundVariable(this.name);
+      const index = ctx.fn.bindings.push(variable) - 1;
+      ctx.write([
+        OpCodes.OP_ENCFUNCTION,
+        ...num2bytes(0),
+        OpCodes.OP_LOADBOUND,
+        ...num2bytes(index),
+      ]);
+      return;
+    }
+
+    IdentifierExpression.compileAccess(ctx, variable);
+  }
+
+  static compileAccess(ctx, { type, value, scopeNum }) {
     switch (type) {
-      case 'variable':
+      case 'variable': {
+        let ops;
         if (value === 0) {
           ops = [OpCodes.OP_LOAD0];
         } else if (value === 1) {
           ops = [OpCodes.OP_LOAD1];
         } else {
-          ops = [OpCodes.OP_LOAD, value & 0xff00, value & 0xff];
+          ops = [OpCodes.OP_LOAD, ...num2bytes(value)];
         }
+        ctx.write([...ops, ...num2bytes(scopeNum)]);
         break;
+      }
 
-      case 'parameter':
+      case 'parameter': {
+        let ops;
         if (value === 0) {
           ops = [OpCodes.OP_LOADARG0];
         } else if (value === 1) {
           ops = [OpCodes.OP_LOADARG1];
         } else {
-          ops = [OpCodes.OP_LOADARG, value & 0xff00, value & 0xff];
+          ops = [OpCodes.OP_LOADARG, ...num2bytes(value)];
         }
+        ctx.write([...ops, ...num2bytes(scopeNum)]);
         break;
+      }
 
-      case 'function':
-        throw new Error(`TypeError: can't load function ${this.name}`);
+      case 'bound':
+        ctx.write([
+          OpCodes.OP_ENCFUNCTION,
+          ...num2bytes(scopeNum),
+          OpCodes.OP_LOADBOUND,
+          ...num2bytes(value),
+        ]);
+        break;
 
       default:
         throw new Error('unreachable');
     }
-
-    ctx.write([...ops, ...num2bytes(scopeNum)]);
   }
 }
 
