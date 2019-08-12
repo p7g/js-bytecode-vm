@@ -16,10 +16,7 @@ Here's a snippet of the language:
 
 ```js
 function multiplier(a) {
-  function multiply(b) {
-    return a * b;
-  }
-  return multiply;
+  return b => a * b;
 }
 
 var times2 = multiplier(2);
