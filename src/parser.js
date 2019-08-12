@@ -9,10 +9,12 @@ class Parser extends nearley.Parser {
 
   get result() {
     const { results } = this;
-    assert(
-      results.length <= 1,
-      `Got >1 parses: ${JSON.stringify(results)}`,
-    );
+    if (results.length > 1) {
+      /* eslint-disable no-console */
+      console.error('Got >1 parses');
+      console.dir(results, { depth: 100 });
+      /* eslint-enable no-console */
+    }
 
     return results[0];
   }

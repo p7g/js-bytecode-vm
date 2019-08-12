@@ -28,6 +28,7 @@ const lexer = moo.compile({
     caret: '^',
     exclaim: '!',
     tiled: '~',
+    fatarrow: '=>',
     less: '<',
     more: '>',
     equal: '==',
@@ -166,7 +167,8 @@ block -> %lbrace ( statement ):* %rbrace {%
     }
 %}
 
-expression -> assignmentExpression {% id %}
+expression -> arrowFunctionExpression {% id %}
+            | assignmentExpression {% id %}
 
 assignmentExpression -> identifier %oneequal assignmentExpression {%
     function([target, _, exp]) {
@@ -212,6 +214,7 @@ unaryExpression -> ( %exclaim | %tilde | %minus ) unaryExpression {%
 primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}
                    | booleanExpression {% id %}
                    | callExpression {% id %}
+                   | functionExpression {% id %}
                    | identifier {% ([ident]) => new AST.IdentifierExpression(ident) %}
                    | %lparen expression %rparen {% (([, expr, _]) => expr) %}
 
@@ -224,6 +227,30 @@ booleanExpression -> ( %true_ | %false_ ) {%
 callExpression -> primaryExpression %lparen argumentList %rparen {%
     function([expr, _, args]) {
         return new AST.CallExpression(expr, args);
+    }
+%}
+
+functionExpression -> %function_ identifier:? %lparen parameterList %rparen block {%
+    function([, name, , params, , body]) {
+        return new AST.FunctionDeclaration(name, params, body.statements);
+    }
+%}
+
+arrowFunctionExpression -> ( identifier | %lparen parameterList %rparen ) %fatarrow ( assignmentExpression | block ) {%
+    function([[params], , [body]]) {
+        let actualParams;
+        if (Array.isArray(params)) {
+            [, actualParams, ] = params;
+        } else {
+            actualParams = [params];
+        }
+        let actualBody;
+        if (body instanceof AST.Block) {
+            actualBody = body.statements;
+        } else {
+            actualBody = [new AST.ReturnStatement(body)];
+        }
+        return new AST.FunctionDeclaration(null, actualParams, actualBody);
     }
 %}
 

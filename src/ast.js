@@ -432,7 +432,10 @@ class FunctionDeclaration {
 
   compile(ctx) {
     const functionLabel = ctx.bc.newLabel();
-    ctx.scope.declareVariable(this.name);
+    if (this.name !== null) {
+      ctx.scope.declareVariable(this.name);
+    }
+
     ctx.bc.write(OpCodes.OP_NEWFUNCTION);
     functionLabel.address();
 

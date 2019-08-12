@@ -1,5 +1,7 @@
-for (var i = 0; i < 10; i = i + 1) {
-    print(i);
+function multiplier(a) {
+    return b => a * b;
 }
 
-print(100);
+var times2 = multiplier(2);
+
+print(times2(3));
