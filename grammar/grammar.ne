@@ -232,7 +232,7 @@ callExpression -> primaryExpression %lparen argumentList %rparen {%
 
 functionExpression -> %function_ identifier:? %lparen parameterList %rparen block {%
     function([, name, , params, , body]) {
-        return new AST.FunctionDeclaration(name, params, body.statements);
+        return new AST.FunctionDeclaration(name, params, body.statements, true);
     }
 %}
 
@@ -250,7 +250,7 @@ arrowFunctionExpression -> ( identifier | %lparen parameterList %rparen ) %fatar
         } else {
             actualBody = [new AST.ReturnStatement(body)];
         }
-        return new AST.FunctionDeclaration(null, actualParams, actualBody);
+        return new AST.FunctionDeclaration(null, actualParams, actualBody, true);
     }
 %}
 

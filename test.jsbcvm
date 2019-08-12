@@ -2,6 +2,8 @@ function multiplier(a) {
     return b => a * b;
 }
 
+function test() {};
+
 var times2 = multiplier(2);
 
 print(times2(3));

@@ -424,17 +424,15 @@ class Block {
 }
 
 class FunctionDeclaration {
-  constructor(name, params, body) {
+  constructor(name, params, body, asExpression = false) {
     this.name = name;
     this.params = params;
     this.body = body;
+    this.asExpression = asExpression;
   }
 
   compile(ctx) {
     const functionLabel = ctx.bc.newLabel();
-    if (this.name !== null) {
-      ctx.scope.declareVariable(this.name);
-    }
 
     ctx.bc.write(OpCodes.OP_NEWFUNCTION);
     functionLabel.address();
@@ -448,6 +446,11 @@ class FunctionDeclaration {
     });
     const innerScope = innerCtx.scope;
     const skip = ctx.bc.newLabel();
+
+    if (this.name !== null) {
+      // don't declare the function in the outer scope if it's an expression
+      (this.asExpression ? innerCtx : ctx).scope.declareVariable(this.name);
+    }
 
     for (const param of this.params) {
       innerScope.declareParameter(param);
