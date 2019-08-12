@@ -463,6 +463,11 @@ class FunctionDeclaration {
       statement.compile(innerCtx);
     }
 
+    const { instructions } = ctx.bc;
+    if (instructions[instructions.length - 3] !== OpCodes.OP_RET) {
+      new ReturnStatement(new IntegerLiteral(0)).compile(innerCtx);
+    }
+
     skip.label();
 
     for (const variable of innerCtx.fn.bindings) {
