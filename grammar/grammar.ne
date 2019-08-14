@@ -220,7 +220,7 @@ primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}
                    | identifier {% ([ident]) => new AST.IdentifierExpression(ident) %}
                    | %lparen expression %rparen {% (([, expr, _]) => expr) %}
 
-stringExpression -> %string {% ([s]) => new AST.StringExpression(s.value) %}
+stringExpression -> %string {% ([s]) => new AST.StringExpression(s.value.substring(1, s.value.length - 1)) %}
 
 booleanExpression -> ( %true_ | %false_ ) {%
     function([[kw]]) {
