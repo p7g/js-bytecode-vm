@@ -36,6 +36,7 @@ const lexer = moo.compile({
     notequal: '!=',
     semicolon: ';',
     comma: ',',
+    string: /"(?:[^"\n]|\\[n"])*"/,
     identifier: {
         match: /[_a-zA-Z]\w*/,
         type: moo.keywords({
@@ -213,10 +214,13 @@ unaryExpression -> ( %exclaim | %tilde | %minus ) unaryExpression {%
 
 primaryExpression -> integerLiteral {% ([n]) => new AST.IntegerLiteral(n) %}
                    | booleanExpression {% id %}
+                   | stringExpression {% id %}
                    | callExpression {% id %}
                    | functionExpression {% id %}
                    | identifier {% ([ident]) => new AST.IdentifierExpression(ident) %}
                    | %lparen expression %rparen {% (([, expr, _]) => expr) %}
+
+stringExpression -> %string {% ([s]) => new AST.StringExpression(s.value) %}
 
 booleanExpression -> ( %true_ | %false_ ) {%
     function([[kw]]) {

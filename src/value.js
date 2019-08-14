@@ -1,4 +1,4 @@
-const { assert } = require('./utils');
+const { assert, RuntimeError } = require('./utils');
 
 let _i = 0;
 function i() {
@@ -9,11 +9,16 @@ const ValueType = {
   INTEGER: i(),
   BOOLEAN: i(),
   FUNCTION: i(),
+  STRING: i(),
   BUILTIN_FUNCTION: i(),
 };
 
 function value(type, v) {
   return { type, value: v };
+}
+
+function makeString(s) {
+  return value(ValueType.STRING, s);
 }
 
 function makeBuiltinFunction(fn) {
@@ -51,14 +56,31 @@ function eq(a, b) {
   return makeBoolean(a.value === b.value);
 }
 
+function add(a, b) {
+  if (a.type === ValueType.INTEGER) {
+    assert(b.type === ValueType.INTEGER);
+  } else if (a.type === ValueType.STRING) {
+    assert(b.type === ValueType.STRING);
+  } else {
+    throw new RuntimeError();
+  }
+
+  if (a.type === ValueType.INTEGER) {
+    return makeInteger(a.value + b.value);
+  }
+  return makeString(a.value + b.value);
+}
+
 module.exports = {
   ValueType,
-  isTruthy,
+  add,
   eq,
-  makeInteger,
+  isTruthy,
   makeBoolean,
-  makeFunction,
   makeBuiltinFunction,
+  makeFunction,
+  makeInteger,
+  makeString,
 };
 
 const intOperations = [
@@ -76,22 +98,24 @@ const intOperations = [
 ];
 
 for (const [name, op, ret] of intOperations) {
-  module.exports[`${name}`] = (a, b) => {
-    if (op.length === 2) {
-      assert(a.type === b.type && a.type === ValueType.INTEGER,
-        `can only ${name} ints, got ${a.type} and ${b.type}`);
-      return (ret || makeInteger)(op(a.value, b.value));
-    }
-    if (op.length === 1) {
-      assert(a.type === ValueType.INTEGER, `can only ${name} an int`);
-      return (ret || makeInteger)(op(a.value));
-    }
-    throw new Error(
-      `Expected op function to have 1 or 2 args, got ${op.length}`,
-    );
-  };
+  if (!module.exports[name]) {
+    module.exports[name] = (a, b) => {
+      if (op.length === 2) {
+        assert(a.type === b.type && a.type === ValueType.INTEGER,
+          `can only ${name} ints, got ${a.type} and ${b.type}`);
+        return (ret || makeInteger)(op(a.value, b.value));
+      }
+      if (op.length === 1) {
+        assert(a.type === ValueType.INTEGER, `can only ${name} an int`);
+        return (ret || makeInteger)(op(a.value));
+      }
+      throw new Error(
+        `Expected op function to have 1 or 2 args, got ${op.length}`,
+      );
+    };
+  }
 
-  if (op.length === 2) {
+  if (op.length === 2 && !module.exports[`${name}1`]) {
     module.exports[`${name}1`] = (a) => {
       assert(a.type === ValueType.INTEGER, `can only ${name} 1 to an int`);
       return (ret || makeInteger)(op(a.value, 1));

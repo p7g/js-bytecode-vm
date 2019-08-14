@@ -45,6 +45,7 @@ module.exports = {
   OP_FJMP: inst(),
   OP_NEWSCOPE: inst(),
   OP_ENDSCOPE: inst(),
+  OP_NEWSTRING: inst(),
   OP_NEWFUNCTION: inst(),
   OP_CALL: inst(),
   OP_ENCFUNCTION: inst(),

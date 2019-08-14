@@ -11,17 +11,10 @@ function instrinsicBoundValues(fn) {
   return makeInteger(0);
 }
 
-function getIntrinsics() {
-  const scope = new Scope();
-  const environment = [];
+function getIntrinsics(compiler) {
+  compiler.addToEnvironment('print', makeBuiltinFunction(intrinsicPrint));
 
-  scope.declareVariable('print');
-  environment.push(makeBuiltinFunction(intrinsicPrint));
-
-  scope.declareVariable('boundValues');
-  environment.push(makeBuiltinFunction(instrinsicBoundValues));
-
-  return [scope, environment];
+  compiler.addToEnvironment('boundValues', makeBuiltinFunction(instrinsicBoundValues));
 }
 
 module.exports = {

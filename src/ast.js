@@ -41,33 +41,32 @@ class Scope {
 }
 
 class Context {
-  constructor(bc, scope, fn = null, loop = null) {
+  constructor(bc, {
+    compiler,
+    scope,
+    fn,
+    loop,
+  }) {
     this.bc = bc;
-    this.scope = scope;
-    this.fn = fn;
-    this.loop = loop;
+    this.compiler = compiler;
+    this.scope = scope || compiler.initialScope;
+    this.fn = fn || null;
+    this.loop = loop || null;
   }
 
   withScope(scope) {
-    return new Context(this.bc, scope);
+    return new Context(this.bc, { ...this, scope });
   }
 
   withNewScope() {
     return this.withScope(new Scope(this.scope));
   }
 
-  with({
-    bc,
-    scope,
-    fn,
-    loop,
-  }) {
-    return new Context(
-      bc || this.bc,
-      scope || this.scope,
-      fn || this.fn,
-      loop || this.loop,
-    );
+  with(options) {
+    return new Context(options.bc || this.bc, {
+      ...this,
+      ...options,
+    });
   }
 
   write(instructions) {
@@ -107,9 +106,9 @@ class Label {
 }
 
 class Bytecode {
-  constructor(initialScope = new Scope()) {
+  constructor(compiler) {
     this.instructions = [];
-    this.initialScope = initialScope;
+    this.compiler = compiler;
   }
 
   get position() {
@@ -136,7 +135,7 @@ class Bytecode {
   }
 
   compile(nodes) {
-    const ctx = new Context(this, this.initialScope);
+    const ctx = new Context(this, { compiler: this.compiler });
 
     for (const node of nodes) {
       node.compile(ctx);
@@ -589,6 +588,21 @@ class BooleanExpression {
   }
 }
 
+class StringExpression {
+  constructor(value) {
+    this.value = value;
+  }
+
+  compile(ctx) {
+    const index = ctx.compiler.internString(this.value);
+
+    ctx.write([
+      OpCodes.OP_NEWSTRING,
+      ...num2bytes(index),
+    ]);
+  }
+}
+
 class CallExpression {
   constructor(expr, args) {
     this.expr = expr;
@@ -633,6 +647,7 @@ module.exports = {
   IfStatement,
   IntegerLiteral,
   ReturnStatement,
+  StringExpression,
   UnaryExpression,
   VariableDeclaration,
   WhileStatement,

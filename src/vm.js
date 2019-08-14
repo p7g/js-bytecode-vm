@@ -12,7 +12,7 @@ function log(...args) {
   }
 }
 
-function evaluate(environment, instructions) {
+function evaluate(compiler, instructions) {
   const stack = [];
   let ip = 0;
   let bp = 0;
@@ -21,7 +21,7 @@ function evaluate(environment, instructions) {
   const push = (n) => { stack[sp++] = n; };
   const pop = () => stack[--sp];
 
-  for (const v of environment) {
+  for (const v of compiler.environment) {
     push(v);
   }
 
@@ -264,6 +264,10 @@ function evaluate(environment, instructions) {
 
       case OpCodes.OP_ENDSCOPE:
         endScope();
+        break;
+
+      case OpCodes.OP_NEWSTRING:
+        push(value.makeString(compiler.stringTable[read16()]));
         break;
 
       case OpCodes.OP_NEWFUNCTION:

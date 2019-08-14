@@ -6,6 +6,7 @@ const Parser = require('./parser');
 const { Bytecode } = require('./ast');
 const { getIntrinsics } = require('./intrinsics');
 const { DEBUG } = require('./config');
+const Compiler = require('./compiler');
 
 async function main() {
   const filename = process.argv[2];
@@ -24,17 +25,18 @@ async function main() {
   const ast = parser.result;
 
   if (DEBUG) {
-    console.dir(ast, { depth: 100 });
+    console.dir(ast, { depth: 100 }); // eslint-disable-line no-console
   }
 
-  const [initialScope, env] = getIntrinsics();
-  const bytecode = new Bytecode(initialScope).compile(ast);
+  const compiler = new Compiler();
+  getIntrinsics(compiler);
+  const bytecode = new Bytecode(compiler).compile(ast);
 
   if (DEBUG) {
     disassemble(bytecode);
   }
 
-  evaluate(env, bytecode);
+  evaluate(compiler, bytecode);
 }
 
 main().catch(console.error); // eslint-disable-line no-console
