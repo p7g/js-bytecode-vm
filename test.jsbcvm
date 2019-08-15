@@ -1,5 +1,4 @@
 use array;
-use error;
 
 var myarray = array_new(10);
 
@@ -8,10 +7,7 @@ for (i = 0; i < 10; i = i + 1) {
     array_set(myarray, i, i * i);
 }
 
-for (i = 0; i < 10; i = i + 1) {
-    print("value " + to_string(i) + ": " + to_string(array_get(myarray, i)));
-}
-
-var err = error_new("hello");
-print("is error? " + to_string(is_error(err)));
-print("message: " + error_get_message(err));
+var sum = array_new(1);
+array_set(sum, 0, 0);
+array_foreach(myarray, n => array_set(sum, 0, array_get(sum, 0) + n));
+print("sum is: " + to_string(sum));

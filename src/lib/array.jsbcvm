@@ -1,0 +1,11 @@
+use error;
+
+function array_foreach(array, fn) {
+    if (!is_array(array)) {
+        return error_new("Not an array");
+    }
+    var len = array_length(array);
+    for (var i = 0; i < len; i = i + 1) {
+        fn(array_get(array, i));
+    }
+}

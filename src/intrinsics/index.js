@@ -12,8 +12,10 @@ function getIntrinsics() {
 }
 
 function getIntrinsicFiles() {
+  const lib = path.join(__dirname, '..', 'lib');
   return {
-    error: path.join(__dirname, '..', 'lib', 'error.jsbcvm'),
+    error: path.join(lib, 'error.jsbcvm'),
+    array: path.join(lib, 'array.jsbcvm'),
   };
 }
 

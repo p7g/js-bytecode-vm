@@ -384,7 +384,8 @@ class UseStatement {
       for (const [k, v] of Object.entries(intrinsics[this.name])) {
         ctx.compiler.addToEnvironment(k, v);
       }
-    } else if (intrinsicFiles[this.name] !== undefined) {
+    }
+    if (intrinsicFiles[this.name] !== undefined) {
       ctx.bc.queueCompilation(intrinsicFiles[this.name]);
     }
   }

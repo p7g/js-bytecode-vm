@@ -2,6 +2,10 @@ const value = require('../value');
 
 const { ValueType } = value;
 
+function intrinsicIsArray(array) {
+  return value.makeBoolean(array.type === ValueType.ARRAY);
+}
+
 function intrinsicArrayNew(length) {
   if (length.type !== ValueType.INTEGER) {
     return value.makeNull();
@@ -38,6 +42,7 @@ function intrinsicArrayLength(array) {
 
 function getModule() {
   return Object.entries({
+    is_array: intrinsicIsArray,
     array_new: intrinsicArrayNew,
     array_get: intrinsicArrayGet,
     array_set: intrinsicArraySet,
