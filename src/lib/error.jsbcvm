@@ -1,0 +1,22 @@
+use array;
+
+var ERROR_MESSAGE_OFFSET = 1;
+
+function error_new(message) {
+    var err = array_new(2);
+    array_set(err, 0, "error");
+    array_set(err, ERROR_MESSAGE_OFFSET, message);
+
+    return err;
+}
+
+function is_error(err) {
+    return array_get(err, 0) == "error";
+}
+
+function error_get_message(err) {
+    if (!is_error(err)) {
+        return error_new("Not an error");
+    }
+    return array_get(err, ERROR_MESSAGE_OFFSET);
+}

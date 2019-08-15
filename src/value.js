@@ -101,6 +101,10 @@ function toString(val) {
       return val.value.toString(10);
     case ValueType.STRING:
       return val.value;
+    case ValueType.NULL:
+      return 'null';
+    case ValueType.BOOLEAN:
+      return val.value.toString();
 
     default:
       return null;
@@ -109,11 +113,11 @@ function toString(val) {
 
 function add(a, b) {
   if (a.type === ValueType.INTEGER) {
-    assert(b.type === ValueType.INTEGER);
+    assert(b.type === ValueType.INTEGER, 'if one val is int, both must be');
   } else if (a.type === ValueType.STRING) {
-    assert(b.type === ValueType.STRING);
+    assert(b.type === ValueType.STRING, 'if one val is string, both must be');
   } else {
-    throw new RuntimeError();
+    throw new RuntimeError(`Unsupported type for +: ${typeNames[a.type]}`);
   }
 
   if (a.type === ValueType.INTEGER) {
@@ -147,22 +151,25 @@ const intOperations = [
   ['or', (a, b) => a | b],
   ['and', (a, b) => a & b],
   ['not', a => ~a],
+  ['boolnot', a => !a, makeBoolean, ValueType.BOOLEAN],
   ['ne', (a, b) => a !== b, makeBoolean],
   ['lt', (a, b) => a < b, makeBoolean],
   ['gt', (a, b) => a > b, makeBoolean],
 ];
 
-for (const [name, op, ret] of intOperations) {
+for (const [name, op, ret, type] of intOperations) {
   if (!module.exports[name]) {
+    const t = type || ValueType.INTEGER;
+    // eslint-disable-next-line no-loop-func
     module.exports[name] = (a, b) => {
       if (op.length === 2) {
-        assert(a.type === b.type && a.type === ValueType.INTEGER,
-          `can only ${name} ints, got ${typeNames[a.type]} and `
+        assert(a.type === b.type && a.type === t,
+          `can only ${name} ${typeNames[t]}s, got ${typeNames[a.type]} and `
           + `${typeNames[b.type]}`);
         return (ret || makeInteger)(op(a.value, b.value));
       }
       if (op.length === 1) {
-        assert(a.type === ValueType.INTEGER, `can only ${name} an int`);
+        assert(a.type === t, `can only ${name} an ${typeNames[t]}`);
         return (ret || makeInteger)(op(a.value));
       }
       throw new Error(

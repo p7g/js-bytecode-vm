@@ -37,6 +37,7 @@ module.exports = {
   OP_AND: inst(),
   OP_OR: inst(),
   OP_NOT: inst(),
+  OP_BOOLNOT: inst(),
   OP_EQ: inst(),
   OP_NE: inst(),
   OP_LT: inst(),

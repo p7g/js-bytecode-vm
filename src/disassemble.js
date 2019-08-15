@@ -1,5 +1,5 @@
 const OpCodes = require('./opcode');
-const { ValueType } = require('./value');
+const { ValueType, toString } = require('./value');
 
 const instructionNames = [];
 Object.entries(OpCodes).forEach(([k, v]) => { instructionNames[v] = k; });
@@ -22,6 +22,18 @@ function printStack(stack) {
 
         case ValueType.BUILTIN_FUNCTION:
           buf += `fn ${value.name}`;
+          break;
+
+        case ValueType.ARRAY:
+          buf += `[${value.map(toString).join(', ')}]`;
+          break;
+
+        case ValueType.STRING:
+          buf += `"${value}"`;
+          break;
+
+        case ValueType.NULL:
+          buf += 'null';
           break;
 
         default:
@@ -121,6 +133,10 @@ function disassemble(bytecode_) {
         break;
 
       case OpCodes.OP_NEWFUNCTION:
+        buf += ` ${read16()}`;
+        break;
+
+      case OpCodes.OP_NEWSTRING:
         buf += ` ${read16()}`;
         break;
 

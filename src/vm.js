@@ -216,10 +216,13 @@ function evaluate(compiler, instructions) {
         break;
       }
 
-      case OpCodes.OP_NOT: {
+      case OpCodes.OP_NOT:
         push(value.not(pop()));
         break;
-      }
+
+      case OpCodes.OP_BOOLNOT:
+        push(value.boolnot(pop()));
+        break;
 
       case OpCodes.OP_EQ:
         push(value.eq(pop(), pop()));

@@ -1,3 +1,5 @@
+const path = require('path');
+
 const value = require('../value');
 const array = require('./array');
 const debug = require('./debug');
@@ -6,6 +8,12 @@ function getIntrinsics() {
   return {
     array: array.getModule(),
     debug: debug.getModule(),
+  };
+}
+
+function getIntrinsicFiles() {
+  return {
+    error: path.join(__dirname, '..', 'lib', 'error.jsbcvm'),
   };
 }
 
@@ -33,5 +41,6 @@ function getGlobals() {
 
 module.exports = {
   getIntrinsics,
+  getIntrinsicFiles,
   getGlobals,
 };

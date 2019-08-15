@@ -4,7 +4,7 @@ const fs = require('fs');
 const { assert, num2bytes } = require('./utils');
 const OpCodes = require('./opcode');
 const Parser = require('./parser');
-const { getIntrinsics } = require('./intrinsics');
+const { getIntrinsics, getIntrinsicFiles } = require('./intrinsics');
 
 class Scope {
   constructor(parent = null) {
@@ -65,10 +65,6 @@ class Context {
     return new Context(this.bc, { ...this, scope });
   }
 
-  withNewScope() {
-    return this.withScope(new Scope(this.scope));
-  }
-
   with(options) {
     return new Context(options.bc || this.bc, {
       ...this,
@@ -98,8 +94,9 @@ class Label {
       this.addressLocations.push(this.bc.position);
       location = 0;
     }
-    this.bc.write(location & 0xff00);
-    this.bc.write(location & 0xff);
+    const bytes = num2bytes(location);
+    this.bc.write(bytes[0]);
+    this.bc.write(bytes[1]);
   }
 
   label() {
@@ -115,6 +112,7 @@ class Label {
 class Bytecode {
   constructor(compiler) {
     this.instructions = [];
+    this.compilationQueue = new Set();
     this.compiler = compiler;
   }
 
@@ -123,6 +121,7 @@ class Bytecode {
   }
 
   _validateByte(b) {
+    assert(typeof b === 'number', 'instructions must be a number');
     assert((b & 0xff) === b, 'instructions must be one byte');
   }
 
@@ -141,14 +140,49 @@ class Bytecode {
     return new Label(this);
   }
 
-  compile(nodes) {
-    const ctx = new Context(this, { compiler: this.compiler });
+  queueCompilation(filename) {
+    this.compilationQueue.add(filename);
+  }
+
+  compile(
+    nodes,
+    ctx = new Context(this, { compiler: this.compiler }),
+    addHalt = true,
+  ) {
+    const uses = [];
+
+    while (nodes[0] instanceof UseStatement) {
+      uses.push(nodes.shift());
+    }
+
+    uses.forEach(u => u.compile(ctx));
+
+    if (this.compilationQueue.size > 0) {
+      const asts = [];
+      while (this.compilationQueue.size > 0) {
+        const file = this.compilationQueue.values().next().value;
+
+        const ast = new Parser().feed(fs.readFileSync(file).toString()).result;
+        for (const node of ast) {
+          if (node instanceof UseStatement) {
+            asts.unshift(node);
+          } else {
+            asts.push(node);
+          }
+        }
+
+        this.compilationQueue.delete(file);
+      }
+      this.compile(asts, ctx, false);
+    }
 
     for (const node of nodes) {
       node.compile(ctx);
     }
 
-    this.write(OpCodes.OP_HALT);
+    if (addHalt) {
+      this.write(OpCodes.OP_HALT);
+    }
 
     return this.instructions;
   }
@@ -257,6 +291,9 @@ class UnaryExpression {
       case '~':
         op = OpCodes.OP_NOT;
         break;
+      case '!':
+        op = OpCodes.OP_BOOLNOT;
+        break;
       default:
         throw new Error(`Unrecognized unary operator ${this.op}`);
     }
@@ -337,12 +374,16 @@ class UseStatement {
     if (ctx.includedFiles.has(this.name)) {
       return;
     }
+    ctx.includedFiles.add(this.name);
 
     const intrinsics = getIntrinsics();
-    assert(intrinsics[this.name] !== undefined, `Unknown module ${this.name}`);
-
-    for (const [k, v] of Object.entries(intrinsics[this.name])) {
-      ctx.compiler.addToEnvironment(k, v);
+    const intrinsicFiles = getIntrinsicFiles();
+    if (intrinsics[this.name] !== undefined) {
+      for (const [k, v] of Object.entries(intrinsics[this.name])) {
+        ctx.compiler.addToEnvironment(k, v);
+      }
+    } else if (intrinsicFiles[this.name] !== undefined) {
+      ctx.bc.queueCompilation(intrinsicFiles[this.name]);
     }
   }
 }
@@ -358,12 +399,7 @@ class IncludeStatement {
       return;
     }
 
-    const contents = fs.readFileSync(normalized).toString();
-    const ast = new Parser().feed(contents).result;
-
-    for (const node of ast) {
-      node.compile(ctx);
-    }
+    ctx.bc.queueCompilation(normalized);
 
     ctx.includedFiles.add(normalized);
   }
@@ -441,6 +477,7 @@ class ForStatement {
     incr.label();
     if (this.incr !== null) {
       this.incr.compile(ctx);
+      ctx.bc.write(OpCodes.OP_POP);
     }
     ctx.bc.write(OpCodes.OP_JMP);
     top.address();
