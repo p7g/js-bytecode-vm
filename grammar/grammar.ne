@@ -75,7 +75,7 @@ lexer.next = (next => () => {
 
 @lexer lexer
 
-start -> useStatement:* statement:* {% ([use, stmt]) => use.concat(stmt) %}
+start -> importStatement:* statement:* {% ([use, stmt]) => use.concat(stmt) %}
 
 declaration -> functionDeclaration {% id %}
              | variableDeclaration {% id %}
@@ -89,7 +89,9 @@ statement -> expressionStatement {% id %}
            | declaration {% id %}
            | breakStatement {% id %}
            | continueStatement {% id %}
-           | includeStatement {% id %}
+
+importStatement -> useStatement {% id %}
+                 | includeStatement {% id %}
 
 useStatement -> %use %identifier %semicolon {%
     function([, name]) {

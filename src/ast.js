@@ -151,7 +151,8 @@ class Bytecode {
   ) {
     const uses = [];
 
-    while (nodes[0] instanceof UseStatement) {
+    while (nodes[0] instanceof UseStatement
+      || nodes[0] instanceof IncludeStatement) {
       uses.push(nodes.shift());
     }
 
@@ -164,7 +165,8 @@ class Bytecode {
 
         const ast = new Parser().feed(fs.readFileSync(file).toString()).result;
         for (const node of ast) {
-          if (node instanceof UseStatement) {
+          if (node instanceof UseStatement
+            || node instanceof IncludeStatement) {
             asts.unshift(node);
           } else {
             asts.push(node);
