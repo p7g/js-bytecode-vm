@@ -1,5 +1,9 @@
+const path = require('path');
+const fs = require('fs');
+
 const { assert, num2bytes } = require('./utils');
 const OpCodes = require('./opcode');
+const Parser = require('./parser');
 
 class Scope {
   constructor(parent = null) {
@@ -46,12 +50,14 @@ class Context {
     scope,
     fn,
     loop,
+    includedFiles,
   }) {
     this.bc = bc;
     this.compiler = compiler;
     this.scope = scope || compiler.initialScope;
     this.fn = fn || null;
     this.loop = loop || null;
+    this.includedFiles = includedFiles || new Set();
   }
 
   withScope(scope) {
@@ -318,6 +324,28 @@ class AssignmentExpression {
 
     this.value.compile(ctx);
     ctx.write([...ops, ...num2bytes(scopeNum)]);
+  }
+}
+
+class IncludeStatement {
+  constructor(filename) {
+    this.filename = filename;
+  }
+
+  compile(ctx) {
+    const normalized = path.normalize(this.filename);
+    if (ctx.includedFiles.has(normalized)) {
+      return;
+    }
+
+    const contents = fs.readFileSync(normalized).toString();
+    const ast = new Parser().feed(contents).result;
+
+    for (const node of ast) {
+      node.compile(ctx);
+    }
+
+    ctx.includedFiles.add(normalized);
   }
 }
 
@@ -651,6 +679,7 @@ module.exports = {
   FunctionDeclaration,
   IdentifierExpression,
   IfStatement,
+  IncludeStatement,
   IntegerLiteral,
   NullExpression,
   ReturnStatement,

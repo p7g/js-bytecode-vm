@@ -47,6 +47,7 @@ const lexer = moo.compile({
             for_: 'for',
             function_: 'function',
             if_: 'if',
+            include: 'include',
             null_: 'null',
             return_: 'return',
             true_: 'true',
@@ -87,6 +88,13 @@ statement -> expressionStatement {% id %}
            | declaration {% id %}
            | breakStatement {% id %}
            | continueStatement {% id %}
+           | includeStatement {% id %}
+
+includeStatement -> %include %string %semicolon {%
+    function([, name]) {
+        return new AST.IncludeStatement(name.value.substring(1, name.value.length - 1));
+    }
+%}
 
 functionDeclaration -> %function_ identifier %lparen parameterList %rparen block {%
     function([, name, , params, , body]) {

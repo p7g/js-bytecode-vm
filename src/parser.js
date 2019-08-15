@@ -1,10 +1,9 @@
 const nearley = require('nearley');
-const grammar = require('../include/grammar');
-const { assert } = require('./utils');
 
 class Parser extends nearley.Parser {
   constructor() {
-    super(nearley.Grammar.fromCompiled(grammar));
+    // eslint-disable-next-line global-require
+    super(nearley.Grammar.fromCompiled(require('../include/grammar')));
   }
 
   get result() {
