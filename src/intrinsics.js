@@ -1,20 +1,76 @@
-const { Scope } = require('./ast');
-const { makeBuiltinFunction, makeInteger } = require('./value');
+const value = require('./value');
 
-function intrinsicPrint(value) {
-  console.log(value.value); // eslint-disable-line no-console
-  return makeInteger(0);
+const { ValueType } = value;
+
+function intrinsicPrint(v) {
+  console.log(v.value); // eslint-disable-line no-console
+  return value.makeNull();
 }
 
-function instrinsicBoundValues(fn) {
+function intrinsicBoundValues(fn) {
   console.log(fn.value.bindings); // eslint-disable-line no-console
-  return makeInteger(0);
+  return value.makeNull();
 }
+
+function intrinsicToString(val) {
+  const strval = value.toString(val);
+
+  if (strval === null) {
+    return value.makeNull();
+  }
+
+  return value.makeString(strval);
+}
+
+function intrinsicArrayNew(length) {
+  if (length.type !== ValueType.INTEGER) {
+    return value.makeNull();
+  }
+
+  return value.makeArray(length.value);
+}
+
+function intrinsicArrayGet(array, index) {
+  if (array.type !== ValueType.ARRAY || index.type !== ValueType.INTEGER) {
+    return value.makeNull();
+  }
+
+  return array.value[index.value];
+}
+
+function intrinsicArraySet(array, index, val) {
+  if (array.type !== ValueType.ARRAY || index.type !== ValueType.INTEGER) {
+    return value.makeNull();
+  }
+
+  array.value[index.value] = val;
+
+  return val;
+}
+
+function intrinsicArrayLength(array) {
+  if (array.type !== ValueType.ARRAY) {
+    return value.makeInteger(-1);
+  }
+
+  return value.makeInteger(array.value.length);
+}
+
+const intrinsics = {
+  print: intrinsicPrint,
+  bound_values: intrinsicBoundValues,
+  to_string: intrinsicToString,
+
+  array_new: intrinsicArrayNew,
+  array_get: intrinsicArrayGet,
+  array_set: intrinsicArraySet,
+  array_length: intrinsicArrayLength,
+};
 
 function getIntrinsics(compiler) {
-  compiler.addToEnvironment('print', makeBuiltinFunction(intrinsicPrint));
-
-  compiler.addToEnvironment('boundValues', makeBuiltinFunction(instrinsicBoundValues));
+  for (const [name, fn] of Object.entries(intrinsics)) {
+    compiler.addToEnvironment(name, value.makeBuiltinFunction(fn));
+  }
 }
 
 module.exports = {

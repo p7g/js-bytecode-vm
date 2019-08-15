@@ -20,6 +20,7 @@ module.exports = {
   OP_LOADARG: inst(),
   OP_LOADARG0: inst(),
   OP_LOADARG1: inst(),
+  OP_LOADNULL: inst(),
   OP_SET: inst(),
   OP_SET0: inst(),
   OP_SET1: inst(),

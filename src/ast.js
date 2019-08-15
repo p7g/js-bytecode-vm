@@ -588,6 +588,12 @@ class BooleanExpression {
   }
 }
 
+class NullExpression {
+  compile(ctx) {
+    ctx.bc.write(OpCodes.OP_LOADNULL);
+  }
+}
+
 class StringExpression {
   constructor(value) {
     this.value = value;
@@ -646,6 +652,7 @@ module.exports = {
   IdentifierExpression,
   IfStatement,
   IntegerLiteral,
+  NullExpression,
   ReturnStatement,
   StringExpression,
   UnaryExpression,

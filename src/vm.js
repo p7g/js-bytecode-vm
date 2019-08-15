@@ -134,6 +134,10 @@ function evaluate(compiler, instructions) {
         push(stack[argOffset(1, read16())]);
         break;
 
+      case OpCodes.OP_LOADNULL:
+        push(value.makeNull());
+        break;
+
       case OpCodes.OP_SET:
         stack[localOffset(read16(), read16())] = stack[topOffset()];
         break;

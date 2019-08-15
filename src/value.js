@@ -1,17 +1,24 @@
 const { assert, RuntimeError } = require('./utils');
 
 let _i = 0;
-function i() {
+function inst() {
   return _i++;
 }
 
 const ValueType = {
-  INTEGER: i(),
-  BOOLEAN: i(),
-  FUNCTION: i(),
-  STRING: i(),
-  BUILTIN_FUNCTION: i(),
+  NULL: inst(),
+  INTEGER: inst(),
+  BOOLEAN: inst(),
+  FUNCTION: inst(),
+  STRING: inst(),
+  ARRAY: inst(),
+  BUILTIN_FUNCTION: inst(),
 };
+
+const typeNames = Object.entries(ValueType).reduce((a, [n, i]) => {
+  a[i] = n;
+  return a;
+}, []);
 
 function value(type, v) {
   return { type, value: v };
@@ -37,12 +44,23 @@ function makeBoolean(v) {
   return value(ValueType.BOOLEAN, v);
 }
 
+function makeArray(length) {
+  return value(ValueType.ARRAY, new Array(length));
+}
+
+function makeNull() {
+  return value(ValueType.NULL);
+}
+
 function isTruthy(v) {
   switch (v.type) {
     case ValueType.INTEGER:
       return v.value !== 0;
     case ValueType.BOOLEAN:
       return v.value === true;
+    case ValueType.STRING:
+    case ValueType.ARRAY:
+      return v.value.length > 0;
     default:
       return true;
   }
@@ -53,7 +71,40 @@ function eq(a, b) {
     return makeBoolean(false);
   }
 
-  return makeBoolean(a.value === b.value);
+  switch (a.type) {
+    case ValueType.INTEGER:
+    case ValueType.BOOLEAN:
+    case ValueType.FUNCTION:
+    case ValueType.BUILTIN_FUNCTION:
+      return makeBoolean(a.value === b.value);
+
+    case ValueType.ARRAY:
+    case ValueType.STRING:
+      if (a.value.length !== b.value.length) {
+        return makeBoolean(false);
+      }
+      for (let i = 0; i < a.value.length; i += 1) {
+        if (a.value[i] !== b.value[i]) {
+          return makeBoolean(false);
+        }
+      }
+      return makeBoolean(true);
+
+    default:
+      return makeBoolean(false);
+  }
+}
+
+function toString(val) {
+  switch (val.type) {
+    case ValueType.INTEGER:
+      return val.value.toString(10);
+    case ValueType.STRING:
+      return val.value;
+
+    default:
+      return null;
+  }
 }
 
 function add(a, b) {
@@ -76,11 +127,15 @@ module.exports = {
   add,
   eq,
   isTruthy,
+  makeArray,
   makeBoolean,
   makeBuiltinFunction,
   makeFunction,
   makeInteger,
+  makeNull,
   makeString,
+  toString,
+  typeNames,
 };
 
 const intOperations = [
@@ -102,7 +157,8 @@ for (const [name, op, ret] of intOperations) {
     module.exports[name] = (a, b) => {
       if (op.length === 2) {
         assert(a.type === b.type && a.type === ValueType.INTEGER,
-          `can only ${name} ints, got ${a.type} and ${b.type}`);
+          `can only ${name} ints, got ${typeNames[a.type]} and `
+          + `${typeNames[b.type]}`);
         return (ret || makeInteger)(op(a.value, b.value));
       }
       if (op.length === 1) {
