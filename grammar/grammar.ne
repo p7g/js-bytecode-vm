@@ -51,6 +51,7 @@ const lexer = moo.compile({
             null_: 'null',
             return_: 'return',
             true_: 'true',
+            use: 'use',
             var_: 'var',
             while_: 'while',
         }),
@@ -74,7 +75,7 @@ lexer.next = (next => () => {
 
 @lexer lexer
 
-start -> statement:+ {% id %}
+start -> useStatement:* statement:* {% ([use, stmt]) => use.concat(stmt) %}
 
 declaration -> functionDeclaration {% id %}
              | variableDeclaration {% id %}
@@ -89,6 +90,12 @@ statement -> expressionStatement {% id %}
            | breakStatement {% id %}
            | continueStatement {% id %}
            | includeStatement {% id %}
+
+useStatement -> %use %identifier %semicolon {%
+    function([, name]) {
+        return new AST.UseStatement(name.value);
+    }
+%}
 
 includeStatement -> %include %string %semicolon {%
     function([, name]) {

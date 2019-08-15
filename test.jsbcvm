@@ -1,3 +1,5 @@
+use array;
+
 var myarray = array_new(10);
 
 var i = 0;

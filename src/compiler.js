@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 const { Scope } = require('./ast');
-const { getIntrinsics } = require('./intrinsics');
+const { getGlobals } = require('./intrinsics');
 const { DEBUG } = require('./config');
 const Parser = require('./parser');
 const { evaluate } = require('./vm');
@@ -11,7 +11,9 @@ const { Bytecode } = require('./ast');
 class Compiler {
   static withIntrinsics() {
     const compiler = new Compiler();
-    getIntrinsics(compiler);
+    for (const [name, fn] of Object.entries(getGlobals())) {
+      compiler.addToEnvironment(name, fn);
+    }
     return compiler;
   }
 

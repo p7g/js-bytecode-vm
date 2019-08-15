@@ -4,6 +4,7 @@ const fs = require('fs');
 const { assert, num2bytes } = require('./utils');
 const OpCodes = require('./opcode');
 const Parser = require('./parser');
+const { getIntrinsics } = require('./intrinsics');
 
 class Scope {
   constructor(parent = null) {
@@ -324,6 +325,25 @@ class AssignmentExpression {
 
     this.value.compile(ctx);
     ctx.write([...ops, ...num2bytes(scopeNum)]);
+  }
+}
+
+class UseStatement {
+  constructor(name) {
+    this.name = name;
+  }
+
+  compile(ctx) {
+    if (ctx.includedFiles.has(this.name)) {
+      return;
+    }
+
+    const intrinsics = getIntrinsics();
+    assert(intrinsics[this.name] !== undefined, `Unknown module ${this.name}`);
+
+    for (const [k, v] of Object.entries(intrinsics[this.name])) {
+      ctx.compiler.addToEnvironment(k, v);
+    }
   }
 }
 
@@ -685,6 +705,7 @@ module.exports = {
   ReturnStatement,
   StringExpression,
   UnaryExpression,
+  UseStatement,
   VariableDeclaration,
   WhileStatement,
 };
