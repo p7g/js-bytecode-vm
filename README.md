@@ -26,6 +26,7 @@ print(times2(4));
 
 ## Next steps
 
-- other datatypes (object, array, string, etc)
-- error handling
+- other datatypes (hashmap)
 - modules
+    - There is currently support for `include`-style imports, but that kinda
+      sucks
