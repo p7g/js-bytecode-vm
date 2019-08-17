@@ -331,8 +331,9 @@ class IfStatement {
 }
 
 class AssignmentExpression {
-  constructor(target, value) {
+  constructor(target, op, value) {
     this.target = target;
+    this.op = op;
     this.value = value;
   }
 
@@ -362,7 +363,33 @@ class AssignmentExpression {
       );
     }
 
+    if (this.op !== '=') {
+      new IdentifierExpression(this.target).compile(ctx);
+    }
+
     this.value.compile(ctx);
+
+    switch (this.op) {
+      case '+=':
+        ops.unshift(OpCodes.OP_ADD);
+        break;
+
+      case '-=':
+        ops.unshift(OpCodes.OP_SUB);
+        break;
+
+      case '*=':
+        ops.unshift(OpCodes.OP_MUL);
+        break;
+
+      case '/=':
+        ops.unshift(OpCodes.OP_DIV);
+        break;
+
+      default:
+        break;
+    }
+
     ctx.write([...ops, ...num2bytes(scopeNum)]);
   }
 }

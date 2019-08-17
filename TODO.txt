@@ -4,3 +4,5 @@ TODO
 - there is still a sorta memory leak where things aren't removed from the stack
     - since OP_RET just sets the stack pointer to the base pointer, we don't pop
       all the stuff after the base pointer off
+- when using the += or -= operators with an expression of 1, the compiler does
+  not generate the more efficient OP_ADD1 or OP_SUB1 opcodes
