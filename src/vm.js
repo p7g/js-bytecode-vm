@@ -198,6 +198,13 @@ function evaluate(compiler, instructions) {
         break;
       }
 
+      case OpCodes.OP_MOD: {
+        const rhs = pop();
+        const lhs = pop();
+        push(value.mod(lhs, rhs));
+        break;
+      }
+
       case OpCodes.OP_NEG:
         stack[topOffset()] = value.neg(stack[topOffset()]);
         break;

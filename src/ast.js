@@ -254,6 +254,9 @@ class BinaryExpression {
       case '/':
         binop(ctx, lhs, rhs, OpCodes.OP_DIV);
         break;
+      case '%':
+        binop(ctx, lhs, rhs, OpCodes.OP_MOD);
+        break;
       case '&':
         binop(ctx, lhs, rhs, OpCodes.OP_AND);
         break;
@@ -384,6 +387,10 @@ class AssignmentExpression {
 
       case '/=':
         ops.unshift(OpCodes.OP_DIV);
+        break;
+
+      case '%=':
+        ops.unshift(OpCodes.OP_MOD);
         break;
 
       default:

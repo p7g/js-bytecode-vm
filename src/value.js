@@ -147,6 +147,7 @@ const intOperations = [
   ['sub', (a, b) => a - b],
   ['mul', (a, b) => a * b],
   ['div', (a, b) => Math.floor(a / b)],
+  ['mod', (a, b) => a % b],
   ['neg', a => -a],
   ['or', (a, b) => a | b],
   ['and', (a, b) => a & b],

@@ -21,10 +21,12 @@ const lexer = moo.compile({
     minusequal: '-=',
     timesequal: '*=',
     divideequal: '/=',
+    moduloequal: '%=',
     plus: '+',
     minus: '-',
     times: '*',
     divide: '/',
+    modulo: '%',
     andand: '&&',
     oror: '||',
     and: '&',
@@ -193,7 +195,11 @@ block -> %lbrace ( statement ):* %rbrace {%
 expression -> arrowFunctionExpression {% id %}
             | assignmentExpression {% id %}
 
-assignmentOp -> ( %oneequal | %plusequal | %minusequal | %timesequal | %divideequal ) {% ([[{ value }]]) => value %}
+assignmentOp -> ( %oneequal | %plusequal | %minusequal | %timesequal | %divideequal | %moduloequal ) {%
+    function([[{ value }]]) {
+        return value;
+    }
+%}
 
 assignmentExpression -> identifier assignmentOp assignmentExpression {%
     function([target, op, exp]) {
@@ -226,7 +232,7 @@ comparisonExpression -> comparisonExpression ( %less | %more ) additionExpressio
 additionExpression -> additionExpression ( %plus | %minus ) multiplicationExpression {% binop %}
                     | multiplicationExpression {% id %}
 
-multiplicationExpression -> multiplicationExpression ( %times | %divide ) unaryExpression {% binop %}
+multiplicationExpression -> multiplicationExpression ( %times | %divide | %modulo ) unaryExpression {% binop %}
                           | unaryExpression {% id %}
 
 unaryExpression -> ( %exclaim | %tilde | %minus ) unaryExpression {%

@@ -33,6 +33,7 @@ module.exports = {
   OP_SUB1: inst(),
   OP_MUL: inst(),
   OP_DIV: inst(),
+  OP_MOD: inst(),
   OP_NEG: inst(),
   OP_AND: inst(),
   OP_OR: inst(),
